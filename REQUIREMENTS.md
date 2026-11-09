@@ -36,9 +36,9 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Check file storage button for the admin (FR-29)
 - [x] Reach the private Blob store with OIDC; Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
 - [x] Put the star and Edit buttons on the photo row so the car name uses the full width (FR-4)
-- [ ] Title number on cars (FR-1)
-- [ ] Do-it-yourself services: Done by Shop / Myself (FR-12, FR-13)
-- [ ] Brand and part number on service items (FR-12, FR-13)
+- [x] Title number on cars (FR-1)
+- [x] Do-it-yourself services: Done by Shop / Myself (FR-12, FR-13)
+- [x] Brand and part number on service items (FR-12, FR-13)
 
 ## Users and access
 

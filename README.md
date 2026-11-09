@@ -12,11 +12,11 @@ The app is organised around **one selected car**, chosen from the selector at th
 | --- | --- | --- |
 | Overview | `/` | Photo, facts, loan, current mileage (with a quick add), due-soon banners, "last done" per service type |
 | Service | `/service` | The car's service records, newest first, with a type filter and text search; log a service, upload an invoice |
-| Service record | `/service/{id}` | Items with type, part, cost and warranty; edit or delete; offers to set the next inspection / oil-change due item |
+| Service record | `/service/{id}` | Items with type, brand, part number, cost and warranty; a DIY tag and who did it for Myself records; edit or delete; offers to set the next inspection / oil-change due item |
 | Due | `/due` | Due items soonest first (overdue and due-soon highlighted), mark done, add or edit; completed items in a collapsed list |
 | To do | `/todo` | Recommended work (from declined invoice jobs or added by hand) with the quoted total; mark done (optionally linking the service record) or dismiss |
 | All cars | `/cars` | A card per visible car with photo, current mileage and its due-soon items; star cars and choose the sort |
-| Add / edit a car | `/cars/new`, `/cars/{id}/edit` | Year, make, model, trim, engine, color, plate, VIN with **Look up**, loan, notes, Shared / Only me |
+| Add / edit a car | `/cars/new`, `/cars/{id}/edit` | Year, make, model, trim, engine, color, plate, title number, VIN with **Look up**, loan, notes, Shared / Only me |
 | Invoice review | `/invoices/{id}/review` | Check, edit, remove or add lines of an uploaded invoice before anything is saved |
 | More | `/more` | Documents, Mileage history, Your data, appearance, people (admin) |
 | Mileage history | `/mileage` | Readings newest first; edit or delete |
@@ -30,7 +30,7 @@ The app is organised around **one selected car**, chosen from the selector at th
 - **VIN lookup** (`app/nhtsa.py`): only when "Look up" is tapped; calls NHTSA vPIC `DecodeVinValues`. Pages never wait on a third party.
 - **Invoice import** (`app/invoice.py`, `app/routes/invoices.py`): the PDF is stored privately, its text extracted with `pypdf` inside the upload request, and parsed for the one supported shop layout (see REQUIREMENTS.md). Only vehicle and job information is kept (encrypted, and only until the review is saved); the customer block and payment history are skipped. The car is matched by the VIN's keyed hash; with no match you pick a car or add one pre-filled from the invoice. A duplicate (same shop and repair order number) warns first. PDFs with no text, or a layout the parser doesn't know, stay attached to the car and open an empty service record. To support another shop, add a parser beside `parse_invoice`.
 - **Files** (`app/storage.py`): photos (resized in the browser to 1600 px JPEG, `app/static/js/uploads.js`) and invoice PDFs go to Vercel Blob with private access under random paths; the database keeps only the reference. They are served only by `/cars/{id}/photo` and `/documents/{id}/file`, behind the same access check. Blob failures are logged with the operation, status and Vercel error code only. The admin's **Check file storage** (More) saves, reads back and deletes a test file and shows the result. Set `VERCEL_BLOB_API_URL` to override the API base. On Vercel the app authenticates with OIDC: `BLOB_STORE_ID` plus the `x-vercel-oidc-token` header of the current request (`OidcMiddleware`; `VERCEL_OIDC_TOKEN` also works). Then `BLOB_READ_WRITE_TOKEN` if set; otherwise files go to `.local-storage/`, never on Vercel (saving fails with a clear message instead). Check file storage also shows the method and whether the store ID and OIDC token were found. Vercel limits a request body to 4.5 MB, so a larger invoice can't be uploaded in production even though the app's own limit is 10 MB.
-- **Encryption**: VIN, plate, notes (car, service, due, recommended work), loan and uploaded filenames use `EncryptedText` / `EncryptedJSON`. `cars.vin_hash` is `crypto.blind_index(vin)`, an HMAC under a key derived from `TOKEN_ENCRYPTION_KEY`.
+- **Encryption**: VIN, plate, title number, notes (car, service, due, recommended work), loan and uploaded filenames use `EncryptedText` / `EncryptedJSON`. `cars.vin_hash` is `crypto.blind_index(vin)`, an HMAC under a key derived from `TOKEN_ENCRYPTION_KEY`.
 - **Audit log**: car added / deleted / visibility changed, invoice uploaded / imported (IDs only).
 
 ### Tables

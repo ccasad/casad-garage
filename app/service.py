@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from app.forms import cents_text, parse_cents, parse_date, parse_miles, parse_months
-from app.models import Car, DueItem, MileageReading, ServiceItem, ServiceRecord
+from app.models import Car, DueItem, MileageReading, ServiceItem, ServiceRecord, User
 from app.service_types import SERVICE_TYPE_LABELS
 
 
@@ -24,11 +24,13 @@ class ItemInput:
     warranty_miles: str = ""
     months_value: int | None = None
     wmiles_value: int | None = None
+    part_number: str = ""
 
     def is_blank(self) -> bool:
         return not (
             self.description.strip()
             or self.part.strip()
+            or self.part_number.strip()
             or self.cost.strip()
             or self.warranty_months.strip()
             or self.warranty_miles.strip()
@@ -41,6 +43,7 @@ class ServiceForm:
     miles: str = ""
     shop: str = ""
     ro_number: str = ""
+    done_by: str = "shop"
     total: str = ""
     notes: str = ""
     document_id: str = ""
@@ -57,6 +60,7 @@ class ServiceForm:
             miles=str(record.miles) if record.miles is not None else "",
             shop=record.shop or "",
             ro_number=record.ro_number or "",
+            done_by=record.done_by,
             total=cents_text(record.total_cents),
             notes=record.notes or "",
             items=[
@@ -68,6 +72,7 @@ class ServiceForm:
                     str(i.id),
                     warranty_months=str(i.warranty_months or ""),
                     warranty_miles=str(i.warranty_miles or ""),
+                    part_number=i.part_number or "",
                 )
                 for i in record.items
             ]
@@ -76,6 +81,10 @@ class ServiceForm:
 
     def clean(self, *, allow_no_items: bool = False) -> "ServiceForm":
         self.shop, self.ro_number = self.shop.strip(), self.ro_number.strip()
+        if self.done_by not in ("shop", "self"):
+            self.done_by = "shop"
+        if self.done_by == "self":
+            self.shop = self.ro_number = ""
         try:
             self.on_date = parse_date(self.on)
         except ValueError as exc:
@@ -98,12 +107,15 @@ class ServiceForm:
         for item in kept:
             item.description = item.description.strip()
             item.part = item.part.strip()
+            item.part_number = item.part_number.strip()
             if item.type not in SERVICE_TYPE_LABELS:
                 item.type = "other"
             if not item.description:
                 self.errors.setdefault("rows", "Every item needs a description.")
             elif len(item.description) > 200 or len(item.part) > 120:
-                self.errors.setdefault("rows", "An item description or part is too long.")
+                self.errors.setdefault("rows", "An item description or brand is too long.")
+            elif len(item.part_number) > 60:
+                self.errors.setdefault("rows", "A part number is too long (60 characters at most).")
             try:
                 item.cost_cents = parse_cents(item.cost)
             except ValueError:
@@ -129,11 +141,21 @@ def build_items(
     costs: list[str],
     months: list[str] | None = None,
     wmiles: list[str] | None = None,
+    part_numbers: list[str] | None = None,
 ) -> list[ItemInput]:
     """Zip the parallel lists a browser submits for the item rows."""
-    columns = [ids, descriptions, types, parts, costs, months or [], wmiles or []]
+    columns = [
+        ids,
+        descriptions,
+        types,
+        parts,
+        costs,
+        months or [],
+        wmiles or [],
+        part_numbers or [],
+    ]
     count = max(len(column) for column in columns)
-    ids, descriptions, types, parts, costs, months, wmiles = (
+    ids, descriptions, types, parts, costs, months, wmiles, part_numbers = (
         [*column, *[""] * (count - len(column))] for column in columns
     )
     return [
@@ -145,6 +167,7 @@ def build_items(
             ids[i],
             warranty_months=months[i],
             warranty_miles=wmiles[i],
+            part_number=part_numbers[i],
         )
         for i in range(count)
     ]
@@ -156,6 +179,7 @@ def save_record(
     form: ServiceForm,
     record: ServiceRecord | None = None,
     document_id: uuid.UUID | None = None,
+    user: User | None = None,
 ) -> ServiceRecord:
     """Create or update a record from a cleaned form, and keep its odometer reading."""
     if record is None:
@@ -165,6 +189,11 @@ def save_record(
     record.miles = form.miles_value
     record.shop = form.shop or None
     record.ro_number = form.ro_number or None
+    record.done_by = form.done_by
+    if form.done_by != "self":
+        record.done_by_user_id = None
+    elif record.done_by_user_id is None and user is not None:
+        record.done_by_user_id = user.id  # keep the person who did it when someone else edits
     record.notes = form.notes.strip() or None
     total = form.total_cents
     if total is None:
@@ -180,6 +209,7 @@ def save_record(
         item.description = data.description
         item.type = data.type
         item.part = data.part or None
+        item.part_number = data.part_number or None
         item.cost_cents = data.cost_cents
         item.warranty_months = data.months_value
         item.warranty_miles = data.wmiles_value
@@ -275,7 +305,7 @@ def filter_records(
         if query:
             haystack = " ".join(
                 [record.shop or "", record.ro_number or "", record.notes or ""]
-                + [f"{i.description} {i.part or ''}" for i in record.items]
+                + [f"{i.description} {i.part or ''} {i.part_number or ''}" for i in record.items]
             ).lower()
             if query not in haystack:
                 continue

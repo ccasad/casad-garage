@@ -64,7 +64,9 @@ def form_page(
     )
 
 
-async def read_form(request: Request, *, allow_no_items: bool = False) -> service.ServiceForm:
+async def read_form(
+    request: Request, *, allow_no_items: bool = False, done_by: str | None = None
+) -> service.ServiceForm:
     data = await request.form()
     text = lambda key: str(data.get(key, ""))[:8000]
     lists = lambda key: [str(v)[:500] for v in data.getlist(key)][:60]
@@ -73,6 +75,7 @@ async def read_form(request: Request, *, allow_no_items: bool = False) -> servic
         miles=text("miles"),
         shop=text("shop"),
         ro_number=text("ro_number"),
+        done_by=done_by or text("done_by")[:10],
         total=text("total"),
         notes=text("notes"),
         document_id=text("document_id")[:40],
@@ -84,6 +87,7 @@ async def read_form(request: Request, *, allow_no_items: bool = False) -> servic
             lists("item_cost"),
             lists("item_warranty_months"),
             lists("item_warranty_miles"),
+            lists("item_part_number"),
         ),
     )
     return form.clean(allow_no_items=allow_no_items)
@@ -151,7 +155,7 @@ async def create(
     if form.errors:
         return form_page(request, db, user, car, form)
     doc = attached_document(db, user, car, form.document_id)
-    record = service.save_record(db, car, form, document_id=doc.id if doc else None)
+    record = service.save_record(db, car, form, document_id=doc.id if doc else None, user=user)
     # The work is done, so any open due item of the same kind is closed (FR-16).
     due.close_open(db, car.id, {i.type for i in record.items} & set(due.FOLLOW_UP_TYPES))
     db.commit()
@@ -221,7 +225,7 @@ async def update(
     form = await read_form(request)
     if form.errors:
         return form_page(request, db, user, car, form, record)
-    service.save_record(db, car, form, record)
+    service.save_record(db, car, form, record, user=user)
     db.commit()
     return RedirectResponse(f"/service/{record.id}?saved=1", status_code=303)
 

@@ -255,7 +255,7 @@ async def save(request: Request, db: DbSession, user: SignedInUser, doc_id: uuid
     car = cars.get_car(db, user, doc.car_id)
     data = await request.form()
     declined_shown, declined, row_error = read_declined(data)
-    form = await read_form(request, allow_no_items=bool(declined))
+    form = await read_form(request, allow_no_items=bool(declined), done_by="shop")
     form.document_id = str(doc.id)
     if form.errors or row_error:
         return review_page(request, db, user, doc, form, declined_shown, row_errors=row_error)

@@ -37,7 +37,7 @@
       {% if car.nickname %}<p class="text-sm text-slate-500 dark:text-slate-400">{{ car.subtitle }}</p>{% endif %}
     </div>
     <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
-      {% for label, value in [("Year", car.year), ("Make", car.make), ("Model", car.model), ("Trim", car.trim), ("Engine", car.engine), ("Color", car.color), ("Plate", car.plate), ("VIN", car.vin)] if value %}
+      {% for label, value in [("Year", car.year), ("Make", car.make), ("Model", car.model), ("Trim", car.trim), ("Engine", car.engine), ("Color", car.color), ("Plate", car.plate), ("Title number", car.title_number), ("VIN", car.vin)] if value %}
       <div class="min-w-0"><dt class="text-slate-500 dark:text-slate-400">{{ label }}</dt><dd class="break-words font-medium">{{ value }}</dd></div>
       {% endfor %}
     </dl>

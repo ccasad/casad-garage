@@ -46,6 +46,8 @@
 
 - OIDC Blob (003): the Python `vercel` SDK couldn't be installed or inspected here (no network), so the hand-written client was extended: bearer = the request's OIDC token (`x-vercel-oidc-token` header via `OidcMiddleware`, else `VERCEL_OIDC_TOKEN`) plus an `x-vercel-blob-store-id` header; all other requests unchanged. The store-ID header name is unconfirmed against the SDK source; run More > Check file storage after deploy, whose status and error code say if it's wrong. Order: OIDC, read-write token, local folder (never on Vercel).
 
+- 005 (title, DIY, brand): the existing `service_items.part` column now holds the brand (label changed, no rename) and `part_number` is new. `done_by` defaults to shop (server default) so old records are Shop. Editing a DIY record keeps its original person; switching a record to Shop clears it; invoice imports force Shop. The data download names the item field `brand` (was `part`) and adds `part_number`, `done_by`, `title_number`.
+
 ## Needs a human
 - Connect a Vercel Blob store with private access to the project (adds BLOB_STORE_ID; OIDC is used, no token to copy) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so after connecting, run More > Check file storage as admin. If it fails, its status and error code say why.
 - Try the invoice import with one real invoice. The parser was only tested on an invented fixture in the documented layout; if the real PDF's text comes out differently the upload still works (the file is kept and an empty record opens), but the parser in app/invoice.py may need adjusting.
@@ -55,3 +57,4 @@
 - 002-fix-uploads: Blob requests match the official client, upload errors show the server's reason, Blob failures are logged, admin Check file storage (FR-7, FR-18, FR-29, NFR-18)
 - 003-blob-oidc: the Blob backend authenticates with OIDC (store ID + request OIDC token), Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
 - 004-overview-buttons: star and Edit buttons moved onto the photo row; the car name uses the full width and wraps (FR-4)
+- 005-title-diy-parts: car title number, Done by Shop / Myself with a DIY tag, and separate brand and part number on service items (FR-1, FR-12, FR-13)

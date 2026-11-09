@@ -50,6 +50,17 @@
   document.addEventListener("DOMContentLoaded", fillToday);
   document.addEventListener("htmx:afterSettle", fillToday);
 
+  // Service form: "Done by Myself" hides the shop fields.
+  function doneBy() {
+    var select = document.querySelector("select[data-done-by]");
+    var fields = document.querySelector("[data-shop-fields]");
+    if (select && fields) fields.hidden = select.value === "self";
+  }
+  document.addEventListener("change", function (event) {
+    if (event.target.matches && event.target.matches("select[data-done-by]")) doneBy();
+  });
+  document.addEventListener("DOMContentLoaded", doneBy);
+
   // Repeating rows in a form: <button data-add-row="container-id" data-template="template-id">
   // appends a copy of the template; <button data-remove-row> inside a row removes it.
   document.addEventListener("click", function (event) {

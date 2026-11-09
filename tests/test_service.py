@@ -268,3 +268,80 @@ def test_deleting_a_car_deletes_its_service(client, db, member):
 
     assert db.scalar(select(func.count()).select_from(ServiceRecord)) == 0
     assert db.scalar(select(func.count()).select_from(ServiceItem)) == 0
+
+
+def test_the_form_toggles_the_shop_fields(client, db, member):
+    car = make_car(db, member)
+    sign_in(client, db, member)
+    client.post(f"/cars/{car.id}/select")
+
+    page = client.get("/service/new").text
+    assert 'name="done_by"' in page and "data-shop-fields" in page
+    assert 'data-shop-fields class="grid grid-cols-1 gap-4 sm:grid-cols-2" >' in page
+
+    create(client, car, done_by="self")
+    record = db.scalar(select(ServiceRecord))
+    assert (
+        "hidden" in client.get(f"/service/{record.id}/edit").text.split("data-shop-fields")[1][:80]
+    )
+
+
+def test_diy_records_save_the_user_and_hide_the_shop(client, db, member):
+    car = make_car(db, member)
+    sign_in(client, db, member)
+    client.post(f"/cars/{car.id}/select")
+
+    create(
+        client,
+        car,
+        done_by="self",
+        item_description=["Engine air filter"],
+        item_type=["engine_air_filter"],
+        item_part=["Example Brand"],
+        item_part_number=["12345"],
+        item_cost=[""],
+        item_id=[""],
+    )
+
+    record = db.scalar(select(ServiceRecord))
+    assert (record.done_by, record.done_by_user_id) == ("self", member.id)
+    assert record.shop is None and record.ro_number is None
+    item = record.items[0]
+    assert (item.part, item.part_number) == ("Example Brand", "12345")
+    history = client.get("/service").text
+    assert "DIY" in history and f"by {member.display_name}" in history
+    assert "Test Garage" not in history
+    assert "12345" in client.get("/service?q=12345").text
+    assert "No records match" in client.get("/service?q=zzzz").text
+    assert "DIY" in client.get(f"/service/{record.id}").text
+    assert "Engine air filter" in client.get("/").text
+
+
+def test_a_deleted_user_leaves_a_former_member(client, db, member):
+    other = make_user(db, email="diy@example.com", name="Pat Example")
+    car = make_car(db, member)
+    sign_in(client, db, other)
+    create(client, car, done_by="self")
+    record = db.scalar(select(ServiceRecord))
+    assert "by Pat Example" in client.get(f"/service/{record.id}").text
+
+    record.done_by_user_id = None  # what ON DELETE SET NULL leaves behind
+    db.commit()
+    assert "by a former member" in client.get(f"/service/{record.id}").text
+    assert ServiceRecord.done_by_user_id.property.columns[0].foreign_keys.pop().ondelete == (
+        "SET NULL"
+    )
+
+
+def test_shop_records_stay_shop_and_old_brands_remain(client, db, member):
+    car = make_car(db, member)
+    sign_in(client, db, member)
+    client.post(f"/cars/{car.id}/select")
+    create(client, car)
+    record = db.scalar(select(ServiceRecord))
+    assert (record.done_by, record.done_by_user_id) == ("shop", None)
+    assert record.items[0].part == "Acme CF-1" and record.items[0].part_number is None
+    page = client.get("/service").text
+    assert "Test Garage" in page and "DIY" not in page
+    assert "Brand" in client.get(f"/service/{record.id}/edit").text
+    assert "Test Garage" in client.get("/service?q=acme").text

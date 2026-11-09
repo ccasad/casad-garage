@@ -47,6 +47,7 @@ class CarForm:
     lender: str = ""
     loan_end: str = ""
     loan_monthly: str = ""
+    title_number: str = ""
     errors: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -61,13 +62,24 @@ class CarForm:
             engine=car.engine or "",
             color=car.color or "",
             plate=car.plate or "",
+            title_number=car.title_number or "",
             notes=car.notes or "",
             visibility=car.visibility,
             **loan_fields(car),
         )
 
     def clean(self) -> None:
-        for name in ("make", "model", "nickname", "trim", "engine", "color", "plate", "notes"):
+        for name in (
+            "make",
+            "model",
+            "nickname",
+            "trim",
+            "engine",
+            "color",
+            "plate",
+            "title_number",
+            "notes",
+        ):
             setattr(self, name, getattr(self, name).strip())
         self.year = self.year.strip()
         self.vin = re.sub(r"\s+", "", self.vin).upper()
@@ -85,6 +97,8 @@ class CarForm:
                 self.errors[name] = f"Keep this under {limit} characters."
         if len(self.plate) > 20:
             self.errors["plate"] = "Keep this under 20 characters."
+        if len(self.title_number) > 40:
+            self.errors["title_number"] = "Keep this under 40 characters."
         self.lender = self.lender.strip()
         if any((self.lender, self.loan_end.strip(), self.loan_monthly.strip())):
             if not self.lender:
@@ -115,6 +129,7 @@ class CarForm:
         car.engine = self.engine or None
         car.color = self.color or None
         car.plate = self.plate or None
+        car.title_number = self.title_number or None
         car.notes = self.notes or None
         car.loan = (
             {
@@ -144,6 +159,7 @@ def form_dependency(
     lender: Annotated[str, Form(max_length=300)] = "",
     loan_end: Annotated[str, Form(max_length=20)] = "",
     loan_monthly: Annotated[str, Form(max_length=30)] = "",
+    title_number: Annotated[str, Form(max_length=100)] = "",
 ) -> CarForm:
     form = CarForm(
         year,
@@ -160,6 +176,7 @@ def form_dependency(
         lender,
         loan_end,
         loan_monthly,
+        title_number=title_number,
     )
     form.clean()
     return form
@@ -381,10 +398,11 @@ def vin_lookup(
     engine: Annotated[str, Form(max_length=200)] = "",
     color: Annotated[str, Form(max_length=100)] = "",
     plate: Annotated[str, Form(max_length=100)] = "",
+    title_number: Annotated[str, Form(max_length=100)] = "",
 ) -> HTMLResponse:
     """Fill the car form's fields from the VIN. Whatever it can't fill stays as typed."""
     form = CarForm(year, make, model, nickname, re.sub(r"\s+", "", vin).upper(), trim, engine)
-    form.color, form.plate = color, plate
+    form.color, form.plate, form.title_number = color, plate, title_number
     message, ok = "", False
     if not VIN_RE.match(form.vin):
         message = "Enter the 17-character VIN first (no I, O or Q)."

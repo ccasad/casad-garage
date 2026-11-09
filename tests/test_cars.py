@@ -173,3 +173,20 @@ def test_deleting_a_user_deletes_their_cars(client, db, member):
     client.post("/account/delete", data={"confirm": "DELETE"})
 
     assert db.scalar(select(func.count()).select_from(Car)) == 0
+
+
+def test_title_number_is_saved_encrypted_and_shown(client, db, member, engine):
+    sign_in(client, db, member)
+    add_car(client, title_number="  TN-998877 ")
+
+    car = db.scalar(select(Car))
+    assert car.title_number == "TN-998877"
+    with engine.connect() as conn:
+        raw = conn.exec_driver_sql("select title_number from cars").scalar()
+    assert b"TN-998877" not in raw
+    assert "TN-998877" in client.get("/").text
+    assert client.get("/account/export").json()["cars"][0]["title_number"] == "TN-998877"
+    assert add_car(client, title_number="x" * 41).status_code == 422
+    client.post(f"/cars/{car.id}/edit", data={"year": "2019", "make": "Acme", "model": "R"})
+    db.refresh(car)
+    assert car.title_number is None

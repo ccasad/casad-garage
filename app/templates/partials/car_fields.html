@@ -27,5 +27,6 @@
     {{ field("color", "Color", form.color, e.color, attrs='list="colors" autocomplete="off"') }}
     <datalist id="colors">{% for c in ["Black", "White", "Silver", "Gray", "Blue", "Red", "Green", "Brown", "Beige", "Gold", "Orange", "Yellow"] %}<option value="{{ c }}">{% endfor %}</datalist>
     {{ field("plate", "Plate", form.plate, e.plate, attrs='autocapitalize="characters" autocomplete="off"') }}
+    {{ field("title_number", "Title number", form.title_number, e.title_number, attrs='maxlength="40" autocomplete="off"') }}
   </div>
 </div>

@@ -209,6 +209,7 @@ class Car(Base):
     vin: Mapped[str | None] = mapped_column(EncryptedText)
     vin_hash: Mapped[bytes | None] = mapped_column(LargeBinary, index=True)
     plate: Mapped[str | None] = mapped_column(EncryptedText)
+    title_number: Mapped[str | None] = mapped_column(EncryptedText)
     notes: Mapped[str | None] = mapped_column(EncryptedText)
     # The loan, if any (FR-28): {"lender", "final_date" (ISO), "monthly_cents"}. Encrypted.
     loan: Mapped[dict[str, Any] | None] = mapped_column(EncryptedJSON)
@@ -284,6 +285,11 @@ class ServiceRecord(Base):
     miles: Mapped[int | None]
     shop: Mapped[str | None] = mapped_column(String(120))
     ro_number: Mapped[str | None] = mapped_column(String(40))
+    # Who did the work (FR-12): "shop", or "self" for a do-it-yourself job.
+    done_by: Mapped[str] = mapped_column(String(10), default="shop", server_default="shop")
+    done_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
     total_cents: Mapped[int | None]
     notes: Mapped[str | None] = mapped_column(EncryptedText)
     # The invoice PDF this record was imported from.
@@ -292,6 +298,7 @@ class ServiceRecord(Base):
     )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
+    done_by_user: Mapped[User | None] = relationship()
     items: Mapped[list["ServiceItem"]] = relationship(
         back_populates="record",
         cascade="all, delete-orphan",
@@ -310,7 +317,9 @@ class ServiceItem(Base):
     position: Mapped[int] = mapped_column(default=0)
     description: Mapped[str] = mapped_column(String(200))
     type: Mapped[str] = mapped_column(String(30), default="other")
+    # The brand (the column predates the separate part number).
     part: Mapped[str | None] = mapped_column(String(120))
+    part_number: Mapped[str | None] = mapped_column(String(60))
     cost_cents: Mapped[int | None]
     # A warranty on this part (FR-27): months and/or miles from the service
     warranty_months: Mapped[int | None]

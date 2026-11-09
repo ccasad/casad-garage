@@ -23,7 +23,7 @@
   {% if total_records %}
   <form method="get" action="/service" hx-boost="false" class="flex flex-wrap gap-2">
     <label class="sr-only" for="q">Search</label>
-    <input id="q" name="q" type="search" value="{{ filter_q }}" placeholder="Search shop, parts, notes"
+    <input id="q" name="q" type="search" value="{{ filter_q }}" placeholder="Search shop, brand, part number, notes"
            class="min-h-[44px] min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
     <label class="sr-only" for="type">Type</label>
     <select id="type" name="type" onchange="this.form.submit()"
@@ -44,7 +44,7 @@
           <p class="font-semibold"><time datetime="{{ r.on.isoformat() }}">{{ r.on.strftime("%b %-d, %Y") }}</time></p>
           {% if r.total_cents is not none %}<p class="font-medium">${{ "{:,.2f}".format(r.total_cents / 100) }}</p>{% endif %}
         </div>
-        <p class="text-sm text-slate-500 dark:text-slate-400">{{ r.shop or "No shop" }}{% if r.miles is not none %} · {{ "{:,}".format(r.miles) }} mi{% endif %}</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{% if r.done_by == "self" %}<span class="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200">DIY</span> by {{ r.done_by_user.display_name if r.done_by_user else "a former member" }}{% else %}{{ r.shop or "No shop" }}{% endif %}{% if r.miles is not none %} · {{ "{:,}".format(r.miles) }} mi{% endif %}</p>
         <p class="mt-2 text-sm">{{ r.items | map(attribute="description") | join(", ") }}</p>
       </a>
     </li>

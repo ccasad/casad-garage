@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "partials/forms.html" import field, textarea, primary_button, secondary_link %}
+{% from "partials/forms.html" import field, select, textarea, primary_button, secondary_link %}
 {% from "partials/icons.html" import icon %}
 {% block content %}
 {% set e = form.errors %}
@@ -12,7 +12,8 @@
     {{ field("on", "Date", form.on, e.on, type="date", required=True, attrs="data-today") }}
     {{ field("miles", "Mileage", form.miles, e.miles, attrs='inputmode="numeric" autocomplete="off"', hint="Also added to the mileage history.") }}
   </div>
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+  {{ select("done_by", "Done by", [("shop", "Shop"), ("self", "Myself")], form.done_by, attrs="data-done-by") }}
+  <div data-shop-fields class="grid grid-cols-1 gap-4 sm:grid-cols-2" {% if form.done_by == "self" %}hidden{% endif %}>
     {{ field("shop", "Shop", form.shop, e.shop, attrs='autocomplete="off"') }}
     {{ field("ro_number", "Repair order number", form.ro_number, e.ro_number, attrs='autocomplete="off"') }}
   </div>

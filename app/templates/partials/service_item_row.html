@@ -19,10 +19,17 @@
              class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
     </div>
   </div>
-  <div>
-    <label class="mb-1 block text-sm font-medium">Part or brand</label>
-    <input name="item_part" value="{{ item.part if item else '' }}" maxlength="120" autocomplete="off"
-           class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+  <div class="grid grid-cols-2 gap-2">
+    <div>
+      <label class="mb-1 block text-sm font-medium">Brand</label>
+      <input name="item_part" value="{{ item.part if item else '' }}" maxlength="120" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
+    <div>
+      <label class="mb-1 block text-sm font-medium">Part number</label>
+      <input name="item_part_number" value="{{ item.part_number if item else '' }}" maxlength="60" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
   </div>
   <div class="grid grid-cols-2 gap-2">
     <div>
