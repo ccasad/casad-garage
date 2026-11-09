@@ -31,7 +31,7 @@
       <li class="flex items-start justify-between gap-3 py-2">
         <div class="min-w-0">
           <p class="font-medium">{{ item.description }}</p>
-          <p class="text-sm text-slate-500 dark:text-slate-400">{{ type_labels.get(item.type, item.type) }}{% if item.part %} · {{ item.part }}{% endif %}</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">{{ type_labels.get(item.type, item.type) }}{% if item.part %} · {{ item.part }}{% endif %}{% if item.warranty_months or item.warranty_miles %} · Warranty: {% if item.warranty_months %}{{ item.warranty_months }} months{% endif %}{% if item.warranty_months and item.warranty_miles %} / {% endif %}{% if item.warranty_miles %}{{ "{:,}".format(item.warranty_miles) }} mi{% endif %}{% endif %}</p>
         </div>
         {% if item.cost_cents is not none %}<p class="shrink-0 text-sm">${{ "{:,.2f}".format(item.cost_cents / 100) }}</p>{% endif %}
       </li>

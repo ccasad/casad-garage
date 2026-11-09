@@ -70,6 +70,8 @@ def garage_data(db: Session, user: User) -> dict[str, Any]:
                                 "type": i.type,
                                 "part": i.part,
                                 "cost": cents_text(i.cost_cents),
+                                "warranty_months": i.warranty_months,
+                                "warranty_miles": i.warranty_miles,
                             }
                             for i in r.items
                         ],

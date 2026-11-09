@@ -82,6 +82,8 @@ async def read_form(request: Request, *, allow_no_items: bool = False) -> servic
             lists("item_type"),
             lists("item_part"),
             lists("item_cost"),
+            lists("item_warranty_months"),
+            lists("item_warranty_miles"),
         ),
     )
     return form.clean(allow_no_items=allow_no_items)

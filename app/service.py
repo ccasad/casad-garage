@@ -2,13 +2,13 @@
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.forms import cents_text, parse_cents, parse_date, parse_miles
-from app.models import Car, MileageReading, ServiceItem, ServiceRecord
+from app.forms import cents_text, parse_cents, parse_date, parse_miles, parse_months
+from app.models import Car, DueItem, MileageReading, ServiceItem, ServiceRecord
 from app.service_types import SERVICE_TYPE_LABELS
 
 
@@ -20,9 +20,19 @@ class ItemInput:
     cost: str = ""
     id: str = ""
     cost_cents: int | None = None
+    warranty_months: str = ""
+    warranty_miles: str = ""
+    months_value: int | None = None
+    wmiles_value: int | None = None
 
     def is_blank(self) -> bool:
-        return not (self.description.strip() or self.part.strip() or self.cost.strip())
+        return not (
+            self.description.strip()
+            or self.part.strip()
+            or self.cost.strip()
+            or self.warranty_months.strip()
+            or self.warranty_miles.strip()
+        )
 
 
 @dataclass
@@ -50,7 +60,15 @@ class ServiceForm:
             total=cents_text(record.total_cents),
             notes=record.notes or "",
             items=[
-                ItemInput(i.description, i.type, i.part or "", cents_text(i.cost_cents), str(i.id))
+                ItemInput(
+                    i.description,
+                    i.type,
+                    i.part or "",
+                    cents_text(i.cost_cents),
+                    str(i.id),
+                    warranty_months=str(i.warranty_months or ""),
+                    warranty_miles=str(i.warranty_miles or ""),
+                )
                 for i in record.items
             ]
             or [ItemInput()],
@@ -90,6 +108,13 @@ class ServiceForm:
                 item.cost_cents = parse_cents(item.cost)
             except ValueError:
                 self.errors.setdefault("rows", "Item costs must be amounts like 89.99.")
+            try:
+                item.months_value = parse_months(item.warranty_months)
+                item.wmiles_value = parse_miles(item.warranty_miles, required=False)
+            except ValueError:
+                self.errors.setdefault("rows", "Warranties are whole months (like 36) or miles.")
+            if item.wmiles_value is not None and self.miles_value is None:
+                self.errors.setdefault("rows", "A warranty in miles needs the service's mileage.")
         if not kept and not allow_no_items and "rows" not in self.errors:
             self.errors.setdefault("rows", "Add at least one item.")
         self.items = kept or [ItemInput()]
@@ -97,14 +122,30 @@ class ServiceForm:
 
 
 def build_items(
-    ids: list[str], descriptions: list[str], types: list[str], parts: list[str], costs: list[str]
+    ids: list[str],
+    descriptions: list[str],
+    types: list[str],
+    parts: list[str],
+    costs: list[str],
+    months: list[str] | None = None,
+    wmiles: list[str] | None = None,
 ) -> list[ItemInput]:
     """Zip the parallel lists a browser submits for the item rows."""
-    count = max(len(descriptions), len(types), len(parts), len(costs), len(ids))
-    pad = lambda values: [*values, *[""] * (count - len(values))]
-    ids, descriptions, types, parts, costs = map(pad, (ids, descriptions, types, parts, costs))
+    columns = [ids, descriptions, types, parts, costs, months or [], wmiles or []]
+    count = max(len(column) for column in columns)
+    ids, descriptions, types, parts, costs, months, wmiles = (
+        [*column, *[""] * (count - len(column))] for column in columns
+    )
     return [
-        ItemInput(descriptions[i], types[i] or "other", parts[i], costs[i], ids[i])
+        ItemInput(
+            descriptions[i],
+            types[i] or "other",
+            parts[i],
+            costs[i],
+            ids[i],
+            warranty_months=months[i],
+            warranty_miles=wmiles[i],
+        )
         for i in range(count)
     ]
 
@@ -140,11 +181,54 @@ def save_record(
         item.type = data.type
         item.part = data.part or None
         item.cost_cents = data.cost_cents
+        item.warranty_months = data.months_value
+        item.warranty_miles = data.wmiles_value
         keep.append(item)
     record.items[:] = keep  # items left in `existing` are deleted (delete-orphan)
     db.flush()
     sync_reading(db, record)
+    sync_warranties(db, record)
     return record
+
+
+def add_months(start: date, months: int) -> date:
+    year, month = divmod(start.month - 1 + months, 12)
+    year += start.year
+    month += 1
+    last_day = (date(year + (month == 12), month % 12 + 1, 1) - timedelta(days=1)).day
+    return date(year, month, min(start.day, last_day))
+
+
+def sync_warranties(db: Session, record: ServiceRecord) -> None:
+    """Keep one "warranty ends" due item per item that has a warranty (FR-27)."""
+    linked = {
+        d.service_item_id: d
+        for d in db.scalars(
+            select(DueItem).where(
+                DueItem.source == "warranty",
+                DueItem.service_item_id.in_([i.id for i in record.items]),
+            )
+        )
+    }
+    for item in record.items:
+        due = linked.get(item.id)
+        if not (item.warranty_months or item.warranty_miles):
+            if due:
+                db.delete(due)
+            continue
+        if due is None:
+            due = DueItem(
+                car_id=record.car_id,
+                type="warranty_ends",
+                source="warranty",
+                service_item_id=item.id,
+            )
+            db.add(due)
+        due.due_date = add_months(record.on, item.warranty_months) if item.warranty_months else None
+        due.due_miles = (
+            record.miles + item.warranty_miles if item.warranty_miles and record.miles else None
+        )
+        due.notes = f"Warranty on {item.description}"[:200]
 
 
 def sync_reading(db: Session, record: ServiceRecord) -> None:

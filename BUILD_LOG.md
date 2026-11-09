@@ -11,9 +11,9 @@
 - Starred cars and sorting (FR-9) — Starred cars and sorting (FR-9)
 - Invoice PDF upload, parsing and review (FR-18 to FR-23) — Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - Recommended work from declined jobs (FR-24 to FR-26) — Recommended work from declined jobs (FR-24 to FR-26)
+- Warranties (FR-27) — Warranties (FR-27)
 
 ## Next
-- Warranties (FR-27)
 - Loan payoff (FR-28)
 
 ## Decisions
@@ -33,6 +33,7 @@
 - An uploaded invoice that matches no visible car is visible only to its uploader until a car is chosen; the parsed data is kept (encrypted) only until the review is saved. Uploaded filenames are stored encrypted.
 - If every job on an invoice was declined, saving the review adds only recommended-work items and the odometer reading (no empty service record).
 - Recommended work: the To do tab total sums quoted prices of open items (items without a price are counted separately). Dismissed or done items can be reopened from the collapsed history.
+- Warranty: each service item can carry months and/or miles; the app keeps one 'warranty ends' due item per such item (end date = service date + months, clamped to month end; end mileage = service mileage + warranty miles). These items follow the service record: they can be marked done but not edited or deleted on the Due tab.
 
 ## Needs a human
 - Create a Vercel Blob store and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.

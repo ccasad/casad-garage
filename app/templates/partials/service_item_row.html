@@ -24,5 +24,17 @@
     <input name="item_part" value="{{ item.part if item else '' }}" maxlength="120" autocomplete="off"
            class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
   </div>
+  <div class="grid grid-cols-2 gap-2">
+    <div>
+      <label class="mb-1 block text-sm font-medium">Warranty (months)</label>
+      <input name="item_warranty_months" value="{{ item.warranty_months if item else '' }}" inputmode="numeric" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
+    <div>
+      <label class="mb-1 block text-sm font-medium">Warranty (miles)</label>
+      <input name="item_warranty_miles" value="{{ item.warranty_miles if item else '' }}" inputmode="numeric" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
+  </div>
   <button type="button" data-remove-row class="min-h-[44px] text-sm font-medium text-red-600 dark:text-red-400">Remove item</button>
 </div>

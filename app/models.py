@@ -310,6 +310,9 @@ class ServiceItem(Base):
     type: Mapped[str] = mapped_column(String(30), default="other")
     part: Mapped[str | None] = mapped_column(String(120))
     cost_cents: Mapped[int | None]
+    # A warranty on this part (FR-27): months and/or miles from the service
+    warranty_months: Mapped[int | None]
+    warranty_miles: Mapped[int | None]
 
     record: Mapped[ServiceRecord] = relationship(back_populates="items")
 
