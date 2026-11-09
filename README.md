@@ -67,7 +67,7 @@ The rest of this README describes the template this app started from.
 
 1. Create the repo from this template with issues and the wiki off.
 2. Set the app's name: `APP_NAME` (env var), `name` / `short_name` / `description` in `app/static/manifest.webmanifest`, and `name` in `pyproject.toml`.
-3. Replace the placeholder icons in `app/static/icons/` (keep the file names and sizes; the maskable icon keeps its artwork inside the centre 80%).
+3. Icons are generated: edit the drawing in `scripts/make_icons.py` and run `uv run python scripts/make_icons.py` (one 1024 px master; the car stays inside the centre 80% so maskable icons work).
 4. Fill in `REQUIREMENTS.md` and the `CHANGE ME` lines in `CLAUDE.md`.
 5. Replace `app/templates/pages/home.html` and add pages to `NAV_ITEMS`.
 

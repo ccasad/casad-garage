@@ -31,7 +31,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Recommended work from declined jobs (FR-24 to FR-26)
 - [x] Warranties (FR-27)
 - [x] Loan payoff (FR-28)
-- [ ] The app's own car icon (NFR-17)
+- [x] The app's own car icon (NFR-17)
 
 ## Users and access
 

@@ -67,6 +67,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "alembic" },
+    { name = "pillow" },
     { name = "pytailwindcss" },
     { name = "pytest" },
     { name = "reportlab" },
@@ -91,6 +92,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "alembic", specifier = ">=1.20.1" },
+    { name = "pillow", specifier = ">=13.0.0" },
     { name = "pytailwindcss", specifier = ">=0.4.2" },
     { name = "pytest", specifier = ">=9.2.0" },
     { name = "reportlab", specifier = ">=5.1.0" },

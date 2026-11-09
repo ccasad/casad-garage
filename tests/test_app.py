@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -53,9 +54,34 @@ def test_manifest_icons_exist(client):
 
     assert response.headers["content-type"].startswith("application/manifest+json")
     assert manifest["display"] == "standalone"
-    assert any(icon["purpose"] == "maskable" for icon in manifest["icons"])
     for icon in manifest["icons"]:
+        assert icon["purpose"] == "any maskable"
         assert client.get(icon["src"]).status_code == 200
+
+
+def test_icons_are_the_car_on_the_slug_colour():
+    from io import BytesIO
+
+    from PIL import Image
+
+    icons = Path("app/static/icons")
+    # hue 176, saturation 55%, lightness 42% -> #30a69e
+    for name, size in [
+        ("icon-192.png", 192),
+        ("icon-512.png", 512),
+        ("icon-maskable-512.png", 512),
+        ("apple-touch-icon.png", 180),
+    ]:
+        image = Image.open(BytesIO((icons / name).read_bytes())).convert("RGB")
+        assert image.size == (size, size)
+        assert image.getpixel((0, 0)) == (0x30, 0xA6, 0x9E)  # full-bleed background
+        assert image.getpixel((size // 2, int(size * 0.55))) == (255, 255, 255)  # white car body
+        # nothing but background outside the central 80%
+        margin = int(size * 0.1) - 1
+        assert image.crop((0, 0, size, margin)).getcolors(10) == [
+            (size * margin, (0x30, 0xA6, 0x9E))
+        ]
+    assert "#30a69e" in (icons / "icon.svg").read_text()
 
 
 def test_offline_page_is_static(client):

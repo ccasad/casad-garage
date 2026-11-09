@@ -30,6 +30,7 @@ testpaths = ["tests"]
 [dependency-groups]
 dev = [
     "alembic>=1.20.1",
+    "pillow>=13.0.0",
     "pytailwindcss>=0.4.2",
     "pytest>=9.2.0",
     "reportlab>=5.1.0",
