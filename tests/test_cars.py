@@ -41,7 +41,27 @@ def test_year_make_and_model_are_required(client, db, member):
 def test_a_bad_vin_is_rejected(client, db, member):
     sign_in(client, db, member)
 
-    assert add_car(client, vin="NOTAVIN").status_code == 422
+    for bad in ("ABC1", "ABC-12$45", "1A4AA11AA1A11111I", "1A4AA11AA1A1111111"):
+        response = add_car(client, vin=bad)
+        assert response.status_code == 422
+        assert (
+            "if it&#39;s from before 1981" in response.text
+            or "if it's from before 1981" in response.text
+        )
+
+
+def test_a_pre_1981_vin_is_saved_and_shown(client, db, member, engine):
+    sign_in(client, db, member)
+
+    response = add_car(client, year="1966", vin="6t07t-000 000")
+
+    assert response.status_code == 303
+    car = db.scalar(select(Car))
+    assert car.vin == "6T07T000000" and car.vin_hash is not None
+    assert "6T07T000000" in client.get(f"/cars/{car.id}/edit").text
+    with engine.connect() as conn:
+        raw = conn.exec_driver_sql("select vin from cars").scalar_one()
+    assert b"6T07T000000" not in raw
 
 
 def test_vin_and_plate_are_encrypted_at_rest(client, db, member, engine):

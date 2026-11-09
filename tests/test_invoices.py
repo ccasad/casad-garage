@@ -15,7 +15,7 @@ from app.models import (
     ServiceRecord,
 )
 from tests.conftest import make_car, make_user, sign_in
-from tests.invoice_fixture import FAKE_VIN, invoice_text, make_pdf
+from tests.invoice_fixture import FAKE_VIN, PAGE_1, PAGE_2, invoice_text, make_pdf
 
 
 def upload(client, data=None, name="invoice.pdf", **form):
@@ -115,6 +115,21 @@ def test_upload_matches_the_car_by_vin_and_opens_the_review(client, db, member, 
     assert "Pat Example" not in page
     # Nothing is saved until the review is confirmed
     assert count(db, ServiceRecord) == 0 and count(db, RecommendedItem) == 0
+
+
+def test_upload_matches_a_pre_1981_vin(client, db, member, files):
+    car = make_car(db, member, vin="6T07T000000", nickname="Classic")
+    make_car(db, member, nickname="Other")
+    sign_in(client, db, member)
+    pages = [[(line.replace(FAKE_VIN, "6T07T000000"), right) for line, right in PAGE_1], PAGE_2]
+
+    upload(client, make_pdf(pages))
+
+    doc = db.scalar(select(Document))
+    assert doc.car_id == car.id and doc.status == "review"
+    assert (
+        invoice.parse_invoice(invoice_text().replace(FAKE_VIN, "6T07T000000")).vin == "6T07T000000"
+    )
 
 
 def test_saving_the_review_creates_everything(client, db, member):

@@ -36,9 +36,14 @@
 
 /* Leaves room for the fixed bottom tab bar on phones; sidebar layout needs none. */
 @utility safe-bottom-nav {
-  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 
   @media (width >= 48rem) {
     padding-bottom: 2rem;
   }
+}
+
+/* Phone: the tab bar steps aside while a field has focus (NFR-19, set in app.js). */
+body.keyboard-open [data-tabbar] {
+  display: none;
 }

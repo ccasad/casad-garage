@@ -83,7 +83,7 @@
 
   {% if user %}
   {# Phone: bottom tab bar, one column per nav item #}
-  <nav aria-label="Main" class="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
+  <nav aria-label="Main" data-tabbar class="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
     <ul class="grid" style="grid-template-columns: repeat({{ nav_items | length }}, minmax(0, 1fr))">
       {% for item in nav_items %}
       <li>

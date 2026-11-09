@@ -18,6 +18,21 @@ from app.web import render, render_partial
 router = APIRouter()
 
 VIN_RE = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+CLASSIC_VIN_RE = re.compile(r"^[A-Z0-9]{5,16}$")
+VIN_ERROR = (
+    "Enter a 17-character VIN, or the car's original VIN if it's from before 1981 "
+    "(5 to 16 letters and numbers)."
+)
+CLASSIC_VIN_HINT = "Pre-1981 VIN: enter the year, make and model yourself."
+
+
+def normalize_vin(raw: str) -> str:
+    """Spaces and dashes removed, upper-case; the same value is stored and matched (FR-1, FR-20)."""
+    return re.sub(r"[\s-]+", "", raw).upper()
+
+
+def is_valid_vin(vin: str) -> bool:
+    return bool(VIN_RE.match(vin) or CLASSIC_VIN_RE.match(vin))
 
 
 def loan_fields(car: Car) -> dict[str, str]:
@@ -82,15 +97,15 @@ class CarForm:
         ):
             setattr(self, name, getattr(self, name).strip())
         self.year = self.year.strip()
-        self.vin = re.sub(r"\s+", "", self.vin).upper()
+        self.vin = normalize_vin(self.vin)
         if not (self.year.isdigit() and 1900 <= int(self.year) <= 2100):
             self.errors["year"] = "Enter a 4-digit year, like 2019."
         if not self.make:
             self.errors["make"] = "Make is required."
         if not self.model:
             self.errors["model"] = "Model is required."
-        if self.vin and not VIN_RE.match(self.vin):
-            self.errors["vin"] = "A VIN is 17 letters and numbers (no I, O or Q)."
+        if self.vin and not is_valid_vin(self.vin):
+            self.errors["vin"] = VIN_ERROR
         limits = {"make": 60, "model": 80, "nickname": 60, "trim": 80, "engine": 80, "color": 40}
         for name, limit in limits.items():
             if len(getattr(self, name)) > limit:
@@ -401,10 +416,12 @@ def vin_lookup(
     title_number: Annotated[str, Form(max_length=100)] = "",
 ) -> HTMLResponse:
     """Fill the car form's fields from the VIN. Whatever it can't fill stays as typed."""
-    form = CarForm(year, make, model, nickname, re.sub(r"\s+", "", vin).upper(), trim, engine)
+    form = CarForm(year, make, model, nickname, normalize_vin(vin), trim, engine)
     form.color, form.plate, form.title_number = color, plate, title_number
     message, ok = "", False
-    if not VIN_RE.match(form.vin):
+    if form.vin and not VIN_RE.match(form.vin) and is_valid_vin(form.vin):
+        message = CLASSIC_VIN_HINT
+    elif not VIN_RE.match(form.vin):
         message = "Enter the 17-character VIN first (no I, O or Q)."
     else:
         try:

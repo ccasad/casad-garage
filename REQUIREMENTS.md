@@ -39,8 +39,8 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Title number on cars (FR-1)
 - [x] Do-it-yourself services: Done by Shop / Myself (FR-12, FR-13)
 - [x] Brand and part number on service items (FR-12, FR-13)
-- [ ] Accept pre-1981 VINs: form, Look up and invoice matching (FR-1, FR-2, FR-20)
-- [ ] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
+- [x] Accept pre-1981 VINs: form, Look up and invoice matching (FR-1, FR-2, FR-20)
+- [x] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
 
 ## Users and access
 

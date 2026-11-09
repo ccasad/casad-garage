@@ -78,7 +78,7 @@ def test_empty_result_says_nothing_found(client, db, member, vpic):
 def test_bad_vin_is_not_sent_to_nhtsa(client, db, member, vpic):
     sign_in(client, db, member)
 
-    page = client.post("/cars/vin-lookup", data={"vin": "short"}).text
+    page = client.post("/cars/vin-lookup", data={"vin": "ab$"}).text
 
     assert "Enter the 17-character VIN" in page and vpic["requests"] == []
 
@@ -98,3 +98,21 @@ def test_the_form_has_a_look_up_button(client, db, member):
     sign_in(client, db, member)
 
     assert 'hx-post="/cars/vin-lookup"' in client.get("/cars/new").text
+
+
+def test_short_vin_is_not_looked_up_and_shows_the_hint(client, db, member, vpic):
+    sign_in(client, db, member)
+
+    page = client.post("/cars/vin-lookup", data={"vin": "6T07T000000", "year": "1966"}).text
+
+    assert "Pre-1981 VIN: enter the year, make and model yourself." in page
+    assert "6T07T000000" in page and vpic["requests"] == []
+    assert "disabled" in page
+
+
+def test_vin_with_i_o_or_q_is_still_not_looked_up(client, db, member, vpic):
+    sign_in(client, db, member)
+
+    page = client.post("/cars/vin-lookup", data={"vin": "1A4AA11AA1A11111O"}).text
+
+    assert "Enter the 17-character VIN" in page and vpic["requests"] == []

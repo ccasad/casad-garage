@@ -91,4 +91,44 @@
   }
   document.addEventListener("DOMContentLoaded", localTimes);
   document.addEventListener("htmx:afterSettle", localTimes);
+
+  // VIN field: Look up only works for 17-character VINs; shorter ones are pre-1981 (FR-2).
+  function syncVin(input) {
+    var value = input.value.replace(/[\s-]/g, "");
+    var short = value.length > 0 && value.length !== 17;
+    var scope = input.closest("#car-fields") || document;
+    var button = scope.querySelector("[data-vin-lookup]");
+    var hint = scope.querySelector("[data-vin-hint]");
+    if (button) button.disabled = short;
+    if (hint) hint.hidden = !short;
+  }
+  document.addEventListener("input", function (event) {
+    if (event.target.matches && event.target.matches("[data-vin-input]")) syncVin(event.target);
+  });
+
+  // Phone: hide the bottom tab bar while a field has focus so the on-screen keyboard
+  // doesn't drag it around (NFR-19). Works for every form; no per-page code.
+  var FIELD = "input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=file]), select, textarea";
+  var blurTimer = null;
+  document.addEventListener("focusin", function (event) {
+    if (!event.target.matches || !event.target.matches(FIELD)) return;
+    clearTimeout(blurTimer);
+    document.body.classList.add("keyboard-open");
+  });
+  document.addEventListener("focusout", function () {
+    clearTimeout(blurTimer);
+    blurTimer = setTimeout(function () {
+      var active = document.activeElement;
+      if (!active || !active.matches || !active.matches(FIELD)) {
+        document.body.classList.remove("keyboard-open");
+      }
+    }, 150);
+  });
+  // A boosted navigation swaps the body; make sure the class doesn't linger.
+  document.addEventListener("htmx:afterSettle", function () {
+    var active = document.activeElement;
+    if (!active || !active.matches || !active.matches(FIELD)) {
+      document.body.classList.remove("keyboard-open");
+    }
+  });
 })();
