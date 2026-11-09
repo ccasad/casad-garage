@@ -34,6 +34,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] The app's own car icon (NFR-17)
 - [x] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
 - [x] Check file storage button for the admin (FR-29)
+- [ ] Reach the private Blob store with OIDC; Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
 
 ## Users and access
 
@@ -84,7 +85,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 **Invoice import**
 
-- **FR-18** From the Service tab, a user uploads a PDF invoice (up to 10 MB). The original is stored and listed under Documents for that car, where it can be opened. Uploads to the private Blob store match the official `@vercel/blob` client's requests exactly, and a failed invoice upload shows the reason.
+- **FR-18** From the Service tab, a user uploads a PDF invoice (up to 10 MB). The original is stored and listed under Documents for that car, where it can be opened. Uploads to the private Blob store match the official `@vercel/blob` client's requests exactly, and a failed invoice upload shows the reason. On Vercel the Blob backend authenticates with OIDC: `BLOB_STORE_ID` plus the Vercel OIDC token of the current request (the `x-vercel-oidc-token` header, or `VERCEL_OIDC_TOKEN` when set). Order: OIDC first; then `BLOB_READ_WRITE_TOKEN` if set (local development, or a store connected the older way); otherwise the local folder, and only when not running on Vercel (`VERCEL` unset). On Vercel with no usable credentials, saving fails with "File storage isn't connected: no BLOB_STORE_ID / OIDC token". Reading private blobs (photo, Documents) uses the same authentication.
 - **FR-19** The app reads the PDF's text and, for the supported shop invoice layout (below), extracts: repair order number, date, shop name, VIN, odometer, each job with its title, status (approved or declined), notes and price, and the grand total.
 - **FR-20** The app matches the invoice to a car by VIN; if no visible car matches, it asks which car, or offers to add a new one pre-filled from the invoice's vehicle line.
 - **FR-21** Before anything is saved, a review screen shows the service record (approved jobs) and the declined jobs; the user edits, removes or adds lines, then saves.
@@ -109,7 +110,7 @@ Supported layout (one shop's invoice system; a text PDF, two or more pages):
 
 - **FR-27** A service item can carry a warranty in months and/or miles (e.g. a battery with 36 months). The app works out the end date and adds a "warranty ends" due item.
 - **FR-28** A car can have a loan: lender, final payment date and an optional monthly amount. The final payment date shows as a due item.
-- **FR-29** On the admin's page under More, a **Check file storage** button saves a tiny test file to the store, reads it back, compares it, deletes it, and shows "File storage works" or the failing step with the status code and error code. It also shows which backend is active (Vercel Blob or local folder). Admin only; each check is recorded in the audit log.
+- **FR-29** On the admin's page under More, a **Check file storage** button saves a tiny test file to the store, reads it back, compares it, deletes it, and shows "File storage works" or the failing step with the status code and error code. It also shows which backend is active and method ("Vercel Blob via OIDC", "Vercel Blob via read-write token" or "Local folder") and whether `BLOB_STORE_ID` and an OIDC token were found, never their values. Admin only; each check is recorded in the audit log.
 
 ## Data scope
 
@@ -136,7 +137,7 @@ All data is typed in by users, decoded from the VIN by the free NHTSA vPIC servi
 - **NFR-6** No personal data in logs, URLs or error messages.
 - **NFR-7** Sessions expire after 30 minutes idle.
 - **NFR-8** An audit log records sign-ins and other sensitive actions (including car deletes and visibility changes).
-- **NFR-14** Uploaded files are never reachable by a public URL; downloads go through the app's access check.
+- **NFR-14** Uploaded files are never reachable by a public URL; downloads go through the app's access check. The store is private and the app reaches it with OIDC (no stored secret needed).
 - **NFR-15** Tests use only invented fixtures (fake VIN, names and shop details); no real invoice is ever committed.
 
 **Performance**
