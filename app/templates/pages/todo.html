@@ -1,10 +1,81 @@
 {% extends "base.html" %}
-{% from "partials/icons.html" import empty_state %}
+{% from "partials/icons.html" import icon, empty_state %}
 {% block content %}
 {% if not car %}
 {% include "partials/pick_a_car.html" %}
 {% else %}
-<p class="mb-4 text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
-{{ empty_state("Nothing here yet", "Recommended work for this car will show up here.", "car", "sky") }}
+<div class="max-w-3xl space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <p class="min-w-0 truncate text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+    <a href="/todo/new" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white dark:bg-sky-500 dark:text-slate-950">{{ icon("plus", "size-5") }} Add recommended work</a>
+  </div>
+
+  {% if open_items %}
+  <section aria-label="Total" class="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 dark:border-sky-900 dark:bg-sky-950/60">
+    <p class="text-sm text-slate-600 dark:text-slate-300">Quoted total for the next shop visit</p>
+    <p class="text-2xl font-semibold">${{ "{:,.2f}".format(total_cents / 100) }}</p>
+    {% if unpriced %}<p class="text-xs text-slate-500 dark:text-slate-400">{{ unpriced }} item{{ "" if unpriced == 1 else "s" }} without a quoted price</p>{% endif %}
+  </section>
+  <ul class="space-y-3">
+    {% for item in open_items %}
+    <li class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="font-semibold">{{ item.description }}</p>
+          {% if item.shop_note %}<p class="mt-1 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{{ item.shop_note }}</p>{% endif %}
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {% if item.recommended_on %}Recommended {{ item.recommended_on.strftime("%b %-d, %Y") }}{% endif %}{% if item.recommended_miles is not none %} at {{ "{:,}".format(item.recommended_miles) }} mi{% endif %}
+          </p>
+        </div>
+        {% if item.price_cents is not none %}<p class="shrink-0 font-medium">${{ "{:,.2f}".format(item.price_cents / 100) }}</p>{% endif %}
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <details class="rounded-lg border border-slate-300 dark:border-slate-700">
+          <summary class="inline-flex min-h-[44px] cursor-pointer items-center gap-1 px-3 text-sm font-medium">{{ icon("check", "size-4") }} Mark done</summary>
+          <form method="post" action="/todo/{{ item.id }}/done" hx-boost="false" class="space-y-2 p-3">
+            {% if records %}
+            <label class="block text-sm font-medium" for="rec-{{ item.id }}">Service record that did it (optional)</label>
+            <select id="rec-{{ item.id }}" name="record_id" class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+              <option value="">Not linked</option>
+              {% for r in records %}<option value="{{ r.id }}">{{ r.on.strftime("%b %-d, %Y") }} · {{ r.shop or "No shop" }} · {{ r.items | map(attribute="description") | join(", ") | truncate(40) }}</option>{% endfor %}
+            </select>
+            {% endif %}
+            <button type="submit" class="min-h-[44px] rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white dark:bg-sky-500 dark:text-slate-950">Mark done</button>
+          </form>
+        </details>
+        <form method="post" action="/todo/{{ item.id }}/dismiss" hx-boost="false">
+          <button type="submit" class="min-h-[44px] rounded-lg border border-slate-300 px-3 text-sm font-medium dark:border-slate-700">Dismiss</button>
+        </form>
+        <a href="/todo/{{ item.id }}/edit" class="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-3 text-sm font-medium text-sky-700 dark:text-sky-300">{{ icon("pencil", "size-4") }} Edit</a>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {{ empty_state("Nothing recommended", "Declined jobs from an uploaded invoice land here, or add work a shop suggested.", "clipboard", "sky") }}
+  {% endif %}
+
+  {% if closed_items %}
+  <details class="rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
+    <summary class="min-h-[44px] cursor-pointer py-2 text-sm font-medium">History ({{ closed_items | length }})</summary>
+    <ul class="mt-2 divide-y divide-slate-200 dark:divide-slate-800">
+      {% for item in closed_items %}
+      <li class="flex items-start justify-between gap-3 py-2 text-sm">
+        <div class="min-w-0">
+          <p class="font-medium">{{ item.description }}</p>
+          <p class="text-slate-500 dark:text-slate-400">
+            {{ "Done" if item.status == "done" else "Dismissed" }}{% if item.closed_at %} <time datetime="{{ item.closed_at.isoformat() }}" data-local="date">{{ item.closed_at.strftime("%b %-d, %Y") }}</time>{% endif %}
+            {% if item.done_record_id and item.done_record_id in record_by_id %} · <a class="underline" href="/service/{{ item.done_record_id }}">service record</a>{% endif %}
+          </p>
+        </div>
+        <form method="post" action="/todo/{{ item.id }}/reopen" hx-boost="false">
+          <button type="submit" class="min-h-[44px] rounded-lg px-3 text-sm font-medium text-sky-700 dark:text-sky-300">Reopen</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</div>
 {% endif %}
 {% endblock %}

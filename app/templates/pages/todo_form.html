@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, textarea, primary_button, secondary_link %}
+{% block content %}
+<form method="post" action="{{ '/todo/' ~ item.id ~ '/edit' if item else '/cars/' ~ car.id ~ '/todo' }}" hx-boost="false" class="max-w-xl space-y-4">
+  <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+  {% if errors %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted fields and save again.</p>{% endif %}
+  {{ field("description", "Work", values.description, errors.description, required=True, attrs='maxlength="200" autocomplete="off"') }}
+  {{ textarea("note", "Shop's note", values.note, errors.note) }}
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {{ field("price", "Quoted price ($)", values.price, errors.price, attrs='inputmode="decimal" autocomplete="off"') }}
+    {{ field("on", "Recommended on", values.on, errors.on, type="date") }}
+    {{ field("miles", "At miles", values.miles, errors.miles, attrs='inputmode="numeric" autocomplete="off"', hint="Blank uses the current mileage.") }}
+  </div>
+  <div class="flex gap-2">{{ primary_button("Save") }}{{ secondary_link("Cancel", "/todo") }}</div>
+</form>
+{% endblock %}
