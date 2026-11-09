@@ -8,9 +8,9 @@
 - Service records, typed in (FR-12 to FR-14) — Service records, typed in (FR-11 to FR-14)
 - Due dates and "Due soon" (FR-15 to FR-17) — Due dates and "Due soon" (FR-15 to FR-17)
 - Private cars ("Only me") (FR-8) — Private cars ("Only me") (FR-8)
+- Starred cars and sorting (FR-9) — Starred cars and sorting (FR-9)
 
 ## Next
-- Starred cars and sorting (FR-9)
 - Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - Recommended work from declined jobs (FR-24 to FR-26)
 - Warranties (FR-27)
@@ -27,6 +27,7 @@
 - Open due items of the same type are closed automatically when a service record with an oil change or state/emissions inspection item is first saved; the 'set the next due' offer appears on the record page right after saving (pre-filled: +12 months for inspections, +6 months and +5,000 mi for oil changes, editable).
 - Today's date for 'due soon' is the server's UTC date.
 - Data download: includes every car the user can see (their own, including 'Only me', plus shared ones) with its records; it never includes another person's 'Only me' car. Deleting an account also deletes the cars that person added, shared or not.
+- Sort choices are Name, Year (newest first) and Recently serviced (never-serviced cars last); starred cars always come first.
 
 ## Needs a human
 - Create a Vercel Blob store and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.

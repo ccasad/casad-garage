@@ -7,14 +7,14 @@ import uuid
 from collections.abc import Sequence
 
 from fastapi import HTTPException
-from sqlalchemy import Select, or_, select
+from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app import due, mileage, service, storage
-from app.models import Car, User, UserPrefs
+from app.models import Car, CarStar, ServiceRecord, User, UserPrefs
 from app.service_types import SERVICE_TYPE_LABELS
 
-TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents")
+TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents", "/cars")
 
 
 def visible_filter(user: User):
@@ -42,10 +42,40 @@ def get_prefs(db: Session, user: User) -> UserPrefs:
     return prefs
 
 
+SORTS = [("name", "Name"), ("year", "Year"), ("serviced", "Recently serviced")]
+
+
 def ordered_cars(db: Session, user: User) -> Sequence[Car]:
-    """The user's visible cars in their order (starred first, then their chosen sort)."""
+    """The user's visible cars: starred first, then their chosen sort (FR-9)."""
     cars = list(db.scalars(visible_cars_query(user)))
-    cars.sort(key=lambda c: (c.name.lower(), str(c.id)))
+    prefs = db.get(UserPrefs, user.id)
+    sort = prefs.car_sort if prefs else "name"
+    starred = starred_ids(db, user)
+
+    def by_name(car: Car) -> tuple:
+        return (car.name.lower(), str(car.id))
+
+    if sort == "year":
+        cars.sort(key=lambda c: (-c.year, *by_name(c)))
+    elif sort == "serviced":
+        last = dict(
+            db.execute(
+                select(ServiceRecord.car_id, func.max(ServiceRecord.on)).group_by(
+                    ServiceRecord.car_id
+                )
+            ).all()
+        )
+        # Most recently serviced first; cars never serviced last.
+        cars.sort(
+            key=lambda c: (
+                last.get(c.id) is None,
+                -(last[c.id].toordinal()) if c.id in last else 0,
+                *by_name(c),
+            )
+        )
+    else:
+        cars.sort(key=by_name)
+    cars.sort(key=lambda c: c.id not in starred)  # stable: starred first, order kept
     return cars
 
 
@@ -62,7 +92,17 @@ def select_car(db: Session, user: User, car: Car | None) -> None:
 
 
 def starred_ids(db: Session, user: User) -> set[uuid.UUID]:
-    return set()
+    return set(db.scalars(select(CarStar.car_id).where(CarStar.user_id == user.id)))
+
+
+def toggle_star(db: Session, user: User, car: Car) -> bool:
+    """Star or unstar a car for this user only. Returns whether it is now starred."""
+    star = db.get(CarStar, (user.id, car.id))
+    if star:
+        db.delete(star)
+        return False
+    db.add(CarStar(user_id=user.id, car_id=car.id))
+    return True
 
 
 def can_delete(user: User, car: Car) -> bool:

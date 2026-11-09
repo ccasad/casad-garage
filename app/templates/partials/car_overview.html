@@ -27,7 +27,16 @@
         {% if car.visibility == "private" %}<p class="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300">Only me</p>{% endif %}
         {% if car.nickname %}<p class="text-sm text-slate-500 dark:text-slate-400">{{ car.subtitle }}</p>{% endif %}
       </div>
+      <div class="flex shrink-0 gap-2">
+      <form method="post" action="/cars/{{ car.id }}/star" hx-boost="false" class="shrink-0">
+        <input type="hidden" name="next" value="/">
+        {% set starred = car.id in selector.stars %}
+        <button type="submit" aria-pressed="{{ 'true' if starred else 'false' }}" aria-label="{{ 'Unstar' if starred else 'Star' }} this car" class="inline-flex size-11 items-center justify-center rounded-lg border border-slate-300 dark:border-slate-700">
+          {{ icon("star", "size-5 " ~ ("fill-amber-400 text-amber-500" if starred else "")) }}
+        </button>
+      </form>
       <a href="/cars/{{ car.id }}/edit" class="inline-flex min-h-[44px] shrink-0 items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-medium dark:border-slate-700">{{ icon("pencil", "size-4") }} Edit</a>
+      </div>
     </div>
     <dl class="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
       {% for label, value in [("Year", car.year), ("Make", car.make), ("Model", car.model), ("Trim", car.trim), ("Engine", car.engine), ("Color", car.color), ("Plate", car.plate), ("VIN", car.vin)] if value %}

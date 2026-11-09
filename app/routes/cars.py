@@ -153,6 +153,8 @@ def all_cars(request: Request, db: DbSession, user: SignedInUser) -> HTMLRespons
         active="overview",
         db=db,
         cars=cars.ordered_cars(db, user),
+        sorts=cars.SORTS,
+        sort=cars.get_prefs(db, user).car_sort,
         cards=cars.card_context(db, cars.ordered_cars(db, user)),
     )
 
@@ -301,3 +303,30 @@ def vin_lookup(
     return render_partial(
         request, "partials/car_fields.html", form=form, lookup_message=message, lookup_ok=ok
     )
+
+
+@router.post("/cars/{car_id}/star", dependencies=[Depends(same_origin)])
+def star(
+    db: DbSession,
+    user: SignedInUser,
+    car_id: uuid.UUID,
+    next: Annotated[str, Form(max_length=40)] = "/cars",
+) -> RedirectResponse:
+    car = cars.get_car(db, user, car_id)
+    cars.toggle_star(db, user, car)
+    db.commit()
+    return RedirectResponse(next if next in cars.TAB_PATHS else "/cars", status_code=303)
+
+
+@router.post("/settings/car-sort", dependencies=[Depends(same_origin)])
+def set_sort(
+    db: DbSession,
+    user: SignedInUser,
+    sort: Annotated[str, Form(max_length=10)] = "name",
+    next: Annotated[str, Form(max_length=40)] = "/cars",
+) -> RedirectResponse:
+    if sort not in dict(cars.SORTS):
+        raise HTTPException(status_code=422, detail="Unknown sort")
+    cars.get_prefs(db, user).car_sort = sort
+    db.commit()
+    return RedirectResponse(next if next in cars.TAB_PATHS else "/cars", status_code=303)

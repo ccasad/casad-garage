@@ -238,6 +238,21 @@ class UserPrefs(Base):
     selected_car_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("cars.id", ondelete="SET NULL")
     )
+    # "name", "year" or "serviced" (most recently serviced first)
+    car_sort: Mapped[str] = mapped_column(String(10), default="name", server_default="name")
+
+
+class CarStar(Base):
+    """A car a user has starred; stars are personal and only change that user's order."""
+
+    __tablename__ = "car_stars"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    car_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("cars.id", ondelete="CASCADE"), primary_key=True
+    )
 
 
 class MileageReading(Base):

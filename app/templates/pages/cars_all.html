@@ -5,9 +5,24 @@
 {% if not cars %}
 {{ empty_state("No cars yet", "Use Add a car in the menu at the top right.", "car", "sky") }}
 {% else %}
+<form method="post" action="/settings/car-sort" hx-boost="false" class="mb-4 flex items-center gap-2">
+  <label for="sort" class="text-sm font-medium">Sort by</label>
+  <select id="sort" name="sort" onchange="this.form.submit()" class="min-h-[44px] rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    {% for key, label in sorts %}<option value="{{ key }}" {% if key == sort %}selected{% endif %}>{{ label }}</option>{% endfor %}
+  </select>
+  <noscript><button type="submit" class="min-h-[44px] rounded-lg border border-slate-300 px-3 text-sm dark:border-slate-700">Apply</button></noscript>
+  <span class="text-xs text-slate-500 dark:text-slate-400">Starred cars always come first.</span>
+</form>
 <ul class="grid grid-cols-1 gap-3 sm:grid-cols-2">
   {% for c in cars %}
-  <li>
+  <li class="relative">
+    {% set starred = c.id in selector.stars %}
+    <form method="post" action="/cars/{{ c.id }}/star" hx-boost="false" class="absolute right-2 top-2 z-10">
+      <button type="submit" aria-pressed="{{ 'true' if starred else 'false' }}" aria-label="{{ 'Unstar' if starred else 'Star' }} {{ c.name }}"
+              class="inline-flex size-11 items-center justify-center rounded-full bg-white/90 shadow dark:bg-slate-900/90">
+        {{ icon("star", "size-5 " ~ ("fill-amber-400 text-amber-500" if starred else "text-slate-500")) }}
+      </button>
+    </form>
     <form method="post" action="/cars/{{ c.id }}/select" hx-boost="false">
       <button type="submit" class="block min-h-[44px] w-full rounded-xl border border-slate-200 bg-white p-3 text-left dark:border-slate-800 dark:bg-slate-900">
         {{ car_photo(c, "mb-3 h-32 w-full") }}
