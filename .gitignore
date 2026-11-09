@@ -9,3 +9,6 @@ htmlcov/
 .envrc
 .vercel/
 .DS_Store
+
+# Local stand-in for Vercel Blob
+.local-storage/

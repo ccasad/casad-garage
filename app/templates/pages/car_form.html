@@ -15,7 +15,8 @@
     {{ field("trim", "Trim", form.trim, e.trim) }}
     {{ field("engine", "Engine", form.engine, e.engine) }}
     {{ field("nickname", "Nickname", form.nickname, e.nickname, hint="Shown instead of year, make and model.") }}
-    {{ field("color", "Color", form.color, e.color) }}
+    {{ field("color", "Color", form.color, e.color, attrs='list="colors" autocomplete="off"') }}
+    <datalist id="colors">{% for c in ["Black", "White", "Silver", "Gray", "Blue", "Red", "Green", "Brown", "Beige", "Gold", "Orange", "Yellow"] %}<option value="{{ c }}">{% endfor %}</datalist>
     {{ field("plate", "Plate", form.plate, e.plate, attrs='autocapitalize="characters" autocomplete="off"') }}
   </div>
   {{ textarea("notes", "Notes", form.notes, e.notes) }}

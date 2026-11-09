@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     database_url: str | None = None
 
     admin_email: str | None = None
+
+    # Vercel Blob (photos, invoices). Without a token, files go to a local folder (development).
+    blob_read_write_token: str | None = None
+    local_storage_dir: str = ".local-storage"
     # Passkeys are bound to this domain; changing it invalidates every passkey.
     webauthn_rp_id: str = "localhost"
 

@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
+from app import storage
 from app.models import Car, User, UserPrefs
 
 TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents")
@@ -68,7 +69,8 @@ def can_delete(user: User, car: Car) -> bool:
 
 
 def delete_car_files(db: Session, car: Car) -> None:
-    """Remove stored files (photo, invoices) before the rows go. Added with file storage."""
+    """Remove stored files (photo, invoices) before the rows go."""
+    storage.remove(car.photo_ref)
 
 
 def overview_context(db: Session, car: Car) -> dict:

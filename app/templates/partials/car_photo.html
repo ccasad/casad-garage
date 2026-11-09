@@ -1,0 +1,12 @@
+{% from "partials/icons.html" import icon %}
+{#- The car's photo, or a placeholder. `classes` sizes the box. -#}
+{% macro car_photo(car, classes="h-40 w-full") -%}
+{% if car.photo_ref %}
+<img src="/cars/{{ car.id }}/photo?v={{ car.photo_updated_at.timestamp() | int if car.photo_updated_at else 0 }}" alt="Photo of {{ car.name }}" loading="lazy"
+     class="{{ classes }} rounded-lg bg-slate-100 object-cover dark:bg-slate-800">
+{% else %}
+<div class="{{ classes }} flex items-center justify-center rounded-lg bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500" role="img" aria-label="No photo yet">
+  {{ icon("car", "size-10") }}
+</div>
+{% endif %}
+{%- endmacro %}

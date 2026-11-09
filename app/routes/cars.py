@@ -5,12 +5,12 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from app import audit, cars
+from app import audit, cars, storage
 from app.crypto import blind_index
-from app.models import Car, User
+from app.models import Car, User, utcnow
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render
 
@@ -214,3 +214,42 @@ def delete_car(db: DbSession, user: SignedInUser, car_id: uuid.UUID) -> Redirect
     db.delete(car)
     db.commit()
     return RedirectResponse("/", status_code=303)
+
+
+MAX_PHOTO_BYTES = 3 * 1024 * 1024
+
+
+@router.post("/cars/{car_id}/photo", dependencies=[Depends(same_origin)])
+async def upload_photo(
+    db: DbSession, user: SignedInUser, car_id: uuid.UUID, photo: Annotated[UploadFile, File()]
+) -> Response:
+    """The browser resizes the photo to a JPEG first (FR-7); this only checks and stores it."""
+    car = cars.get_car(db, user, car_id)
+    data = await photo.read(MAX_PHOTO_BYTES + 1)
+    if len(data) > MAX_PHOTO_BYTES:
+        raise HTTPException(status_code=413, detail="The photo is too large.")
+    if not data.startswith(b"\xff\xd8\xff"):
+        raise HTTPException(status_code=415, detail="The photo must be a JPEG.")
+    try:
+        new_ref = storage.save("photos", "jpg", data, "image/jpeg")
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    storage.remove(car.photo_ref)
+    car.photo_ref = new_ref
+    car.photo_updated_at = utcnow()
+    db.commit()
+    return Response(status_code=204)
+
+
+@router.get("/cars/{car_id}/photo")
+def photo(db: DbSession, user: SignedInUser, car_id: uuid.UUID) -> Response:
+    car = cars.get_car(db, user, car_id)
+    if not car.photo_ref:
+        raise HTTPException(status_code=404, detail="No photo")
+    try:
+        data = storage.load(car.photo_ref)
+    except storage.StorageError as exc:
+        raise HTTPException(status_code=404, detail="No photo") from exc
+    return Response(
+        data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"}
+    )

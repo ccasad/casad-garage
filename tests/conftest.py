@@ -17,6 +17,7 @@ from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
 
+from app import storage
 from app.db import get_db
 from app.main import app
 from app.models import Base, User, UserSession, utcnow
@@ -109,3 +110,30 @@ def make_car(db, owner, *, visibility="shared", year=2019, make="Acme", model="R
     db.add(car)
     db.commit()
     return car
+
+
+class MemoryBackend:
+    """Files in a dict, standing in for Vercel Blob."""
+
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+
+    def put(self, pathname, data, content_type):
+        self.files[pathname] = data
+        return pathname
+
+    def get(self, ref):
+        try:
+            return self.files[ref]
+        except KeyError as exc:
+            raise storage.StorageError("missing") from exc
+
+    def delete(self, ref):
+        self.files.pop(ref, None)
+
+
+@pytest.fixture(autouse=True)
+def files(monkeypatch) -> MemoryBackend:
+    backend = MemoryBackend()
+    monkeypatch.setattr(storage, "backend", lambda: backend)
+    return backend
