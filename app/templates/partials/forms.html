@@ -1,0 +1,44 @@
+{#- Form building blocks. Inputs are 16px so iOS doesn't zoom, and 44px tall to tap. -#}
+{% set input_class = "min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900" %}
+
+{% macro field(name, label, value="", error=None, type="text", required=False, hint=None, attrs="", id=None) -%}
+{%- set fid = id or ("f-" ~ name) -%}
+<div>
+  <label for="{{ fid }}" class="mb-1 block text-sm font-medium">{{ label }}{% if required %} <span class="text-slate-500 dark:text-slate-400">(required)</span>{% endif %}</label>
+  <input id="{{ fid }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}" {{ attrs | safe }}
+         {% if required %}required{% endif %} {% if error %}aria-invalid="true" aria-describedby="{{ fid }}-err"{% endif %}
+         class="min-h-[44px] w-full rounded-lg border bg-white px-3 text-base dark:bg-slate-900 {{ 'border-red-500' if error else 'border-slate-300 dark:border-slate-700' }}">
+  {% if hint %}<p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ hint }}</p>{% endif %}
+  {% if error %}<p id="{{ fid }}-err" class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro textarea(name, label, value="", error=None, rows=3) -%}
+<div>
+  <label for="f-{{ name }}" class="mb-1 block text-sm font-medium">{{ label }}</label>
+  <textarea id="f-{{ name }}" name="{{ name }}" rows="{{ rows }}"
+            class="w-full rounded-lg border bg-white px-3 py-2 text-base dark:bg-slate-900 {{ 'border-red-500' if error else 'border-slate-300 dark:border-slate-700' }}">{{ value or "" }}</textarea>
+  {% if error %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro select(name, label, options, value="", error=None, attrs="") -%}
+<div>
+  <label for="f-{{ name }}" class="mb-1 block text-sm font-medium">{{ label }}</label>
+  <select id="f-{{ name }}" name="{{ name }}" {{ attrs | safe }}
+          class="min-h-[44px] w-full rounded-lg border bg-white px-3 text-base dark:bg-slate-900 {{ 'border-red-500' if error else 'border-slate-300 dark:border-slate-700' }}">
+    {% for opt_value, opt_label in options %}
+    <option value="{{ opt_value }}" {% if opt_value == value %}selected{% endif %}>{{ opt_label }}</option>
+    {% endfor %}
+  </select>
+  {% if error %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ error }}</p>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro primary_button(label, attrs="") -%}
+<button type="submit" {{ attrs | safe }} class="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white hover:bg-sky-700 dark:bg-sky-500 dark:text-slate-950">{{ label }}</button>
+{%- endmacro %}
+
+{% macro secondary_link(label, href) -%}
+<a href="{{ href }}" class="inline-flex min-h-[44px] items-center justify-center rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ label }}</a>
+{%- endmacro %}

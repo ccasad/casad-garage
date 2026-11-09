@@ -184,3 +184,53 @@ class AuditEvent(Base):
     )
     event: Mapped[str] = mapped_column(String(50))
     detail: Mapped[dict[str, Any]] = mapped_column(default=dict)
+
+
+class Car(Base):
+    """A car. Shared cars are visible to everyone; private ("Only me") ones only to the
+    person who added them. Everything attached to a car inherits that visibility."""
+
+    __tablename__ = "cars"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    added_by_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    visibility: Mapped[str] = mapped_column(String(10), default="shared", server_default="shared")
+    nickname: Mapped[str | None] = mapped_column(String(60))
+    year: Mapped[int]
+    make: Mapped[str] = mapped_column(String(60))
+    model: Mapped[str] = mapped_column(String(80))
+    trim: Mapped[str | None] = mapped_column(String(80))
+    engine: Mapped[str | None] = mapped_column(String(80))
+    color: Mapped[str | None] = mapped_column(String(40))
+    # Sensitive: encrypted at rest. Matching by VIN uses the keyed hash below.
+    vin: Mapped[str | None] = mapped_column(EncryptedText)
+    vin_hash: Mapped[bytes | None] = mapped_column(LargeBinary, index=True)
+    plate: Mapped[str | None] = mapped_column(EncryptedText)
+    notes: Mapped[str | None] = mapped_column(EncryptedText)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    added_by: Mapped[User] = relationship()
+
+    @property
+    def name(self) -> str:
+        return self.nickname or f"{self.year} {self.make} {self.model}"
+
+    @property
+    def subtitle(self) -> str:
+        """Year, make, model and trim, for places that show the nickname as the title."""
+        return " ".join(p for p in (str(self.year), self.make, self.model, self.trim) if p)
+
+
+class UserPrefs(Base):
+    """Per-user choices: the car last selected (and, later, the sort order)."""
+
+    __tablename__ = "user_prefs"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    selected_car_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("cars.id", ondelete="SET NULL")
+    )

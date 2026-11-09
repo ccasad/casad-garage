@@ -1,0 +1,10 @@
+{% from "partials/icons.html" import icon, empty_state %}
+{% if selector and selector.cars %}
+{{ empty_state("Pick a car above", "Choose a car from the menu at the top right.", "car", "sky") }}
+{% else %}
+<div class="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center dark:border-slate-700 dark:bg-slate-900">
+  <p class="font-medium">No cars yet</p>
+  <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Add a car to get started.</p>
+  <a href="/cars/new" class="mt-4 inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white dark:bg-sky-500 dark:text-slate-950">{{ icon("plus", "size-5") }} Add a car</a>
+</div>
+{% endif %}

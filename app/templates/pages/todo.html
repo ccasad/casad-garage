@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import empty_state %}
+{% block content %}
+{% if not car %}
+{% include "partials/pick_a_car.html" %}
+{% else %}
+<p class="mb-4 text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+{{ empty_state("Nothing here yet", "Recommended work for this car will show up here.", "car", "sky") }}
+{% endif %}
+{% endblock %}

@@ -64,6 +64,7 @@ def account(
         title="Your data",
         user=user,
         active="more",
+        db=db,
         can_delete=not only_admin(db, user),
         notice=NOTICES.get(notice or ""),
     )

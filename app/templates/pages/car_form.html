@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, textarea, primary_button, secondary_link %}
+{% from "partials/icons.html" import icon %}
+{% block content %}
+{% set e = form.errors %}
+<form method="post" action="{{ '/cars/' ~ car.id ~ '/edit' if car else '/cars' }}" hx-boost="false" class="max-w-2xl space-y-4">
+  {% if e %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted fields and save again.</p>{% endif %}
+  {{ field("vin", "VIN", form.vin, e.vin, attrs='autocapitalize="characters" autocomplete="off" maxlength="17"', hint="Optional. Used to match invoices to this car.") }}
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {{ field("year", "Year", form.year, e.year, type="text", required=True, attrs='inputmode="numeric" maxlength="4" autocomplete="off"') }}
+    {{ field("make", "Make", form.make, e.make, required=True, attrs='autocomplete="off"') }}
+    {{ field("model", "Model", form.model, e.model, required=True, attrs='autocomplete="off"') }}
+  </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {{ field("trim", "Trim", form.trim, e.trim) }}
+    {{ field("engine", "Engine", form.engine, e.engine) }}
+    {{ field("nickname", "Nickname", form.nickname, e.nickname, hint="Shown instead of year, make and model.") }}
+    {{ field("color", "Color", form.color, e.color) }}
+    {{ field("plate", "Plate", form.plate, e.plate, attrs='autocapitalize="characters" autocomplete="off"') }}
+  </div>
+  {{ textarea("notes", "Notes", form.notes, e.notes) }}
+  <div class="flex flex-wrap gap-2">
+    {{ primary_button("Save car") }}
+    {{ secondary_link("Cancel", "/") }}
+  </div>
+</form>
+{% endblock %}

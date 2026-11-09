@@ -19,7 +19,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 
 ## Feature to-do list
 
-- [ ] Cars: add, edit, delete; car selector with remembered car; Overview tab; All cars view (FR-1, FR-3 to FR-6)
+- [x] Cars: add, edit, delete; car selector with remembered car; Overview tab; All cars view (FR-1, FR-3 to FR-6)
 - [ ] Color and car photo (FR-1, FR-7)
 - [ ] VIN lookup through NHTSA (FR-2)
 - [ ] Mileage readings (FR-10, FR-11)

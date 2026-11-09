@@ -90,3 +90,22 @@ def member(db):
 @pytest.fixture
 def admin(db):
     return make_user(db, email="admin@example.com", name="Admin", role="admin")
+
+
+def make_car(db, owner, *, visibility="shared", year=2019, make="Acme", model="Roadster", **extra):
+    from app.crypto import blind_index
+    from app.models import Car
+
+    vin = extra.get("vin")
+    car = Car(
+        added_by_id=owner.id,
+        visibility=visibility,
+        year=year,
+        make=make,
+        model=model,
+        vin_hash=blind_index(vin) if vin else None,
+        **extra,
+    )
+    db.add(car)
+    db.commit()
+    return car

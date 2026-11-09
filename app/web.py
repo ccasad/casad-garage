@@ -5,7 +5,10 @@ from typing import Any
 from fastapi import Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from sqlalchemy.orm import Session
 
+from app import cars as car_access
+from app import due
 from app.config import get_settings
 from app.models import User, utcnow
 from app.theme import theme_for
@@ -51,9 +54,21 @@ def render(
     user: User | None,
     active: str | None = None,
     status_code: int = 200,
+    db: Session | None = None,
     **context: Any,
 ) -> HTMLResponse:
-    """Render a page. The navigation only appears for signed-in users."""
+    """Render a page. The navigation and car selector only appear for signed-in users;
+    pass `db` for pages that show the selector."""
+    selector = None
+    if user is not None and db is not None:
+        cars = car_access.ordered_cars(db, user)
+        chosen = car_access.selected_car(db, user)
+        selector = {
+            "cars": cars,
+            "selected": chosen,
+            "due_soon": due.due_soon_car_ids(db, [c.id for c in cars]),
+            "stars": car_access.starred_ids(db, user),
+        }
     return templates.TemplateResponse(
         request,
         template,
@@ -65,6 +80,8 @@ def render(
             "user": user,
             "theme": theme_for(request, user),
             "now": utcnow(),
+            "selector": selector,
+            "current_path": request.url.path,
             **context,
         },
         status_code=status_code,

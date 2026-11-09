@@ -1,4 +1,4 @@
-"""Signed-in pages: Home (replace with the app's own) and More, plus the theme setting."""
+"""Signed-in pages: More, plus the theme setting."""
 
 from typing import Annotated
 
@@ -12,14 +12,9 @@ from app.web import render
 router = APIRouter()
 
 
-@router.get("/", response_class=HTMLResponse, name="home")
-def home(request: Request, user: SignedInUser) -> HTMLResponse:
-    return render(request, "pages/home.html", title="Home", user=user, active="overview")
-
-
 @router.get("/more", response_class=HTMLResponse, name="more")
-def more(request: Request, user: SignedInUser) -> HTMLResponse:
-    return render(request, "pages/more.html", title="More", user=user, active="more")
+def more(request: Request, db: DbSession, user: SignedInUser) -> HTMLResponse:
+    return render(request, "pages/more.html", title="More", user=user, active="more", db=db)
 
 
 @router.post("/settings/theme", dependencies=[Depends(same_origin)])

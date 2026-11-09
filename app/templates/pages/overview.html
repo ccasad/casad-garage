@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon, empty_state %}
+{% block content %}
+{% if not car %}
+  {% include "partials/pick_a_car.html" %}
+{% else %}
+{% include "partials/car_overview.html" %}
+{% endif %}
+{% endblock %}

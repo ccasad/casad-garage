@@ -36,6 +36,7 @@ def people_page(
         title="People",
         user=admin,
         active="more",
+        db=db,
         users=users,
         sign_ins=sign_ins_by_user(db),
         invites=invites,

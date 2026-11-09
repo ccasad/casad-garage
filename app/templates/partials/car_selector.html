@@ -1,0 +1,34 @@
+{% from "partials/icons.html" import icon %}
+{#- The car selector: a menu at the top right of every page (FR-3). -#}
+{% set chosen = selector.selected %}
+<details data-popover class="relative">
+  <summary class="flex min-h-[44px] max-w-[11rem] cursor-pointer list-none items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium dark:border-slate-700 dark:bg-slate-900 md:max-w-xs">
+    {{ icon("car", "size-5 shrink-0") }}
+    <span class="truncate">{{ chosen.name if chosen else "Pick a car" }}</span>
+    {{ icon("chevron-down", "size-4 shrink-0") }}
+  </summary>
+  <div class="absolute right-0 z-30 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-xl border border-slate-200 bg-white p-1 shadow-lg dark:border-slate-700 dark:bg-slate-900">
+    <a href="/cars" class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800">
+      {{ icon("car", "size-5") }} All cars
+    </a>
+    <ul class="max-h-80 overflow-y-auto">
+      {% for car in selector.cars %}
+      <li>
+        <form method="post" action="/cars/{{ car.id }}/select" hx-boost="false">
+          <input type="hidden" name="next" value="{{ current_path }}">
+          <button type="submit" {% if chosen and chosen.id == car.id %}aria-current="true"{% endif %}
+                  class="flex min-h-[44px] w-full items-center gap-2 rounded-lg px-3 text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 {% if chosen and chosen.id == car.id %}bg-sky-50 font-semibold text-sky-700 dark:bg-sky-950 dark:text-sky-300{% endif %}">
+            {% if car.id in selector.stars %}{{ icon("star", "size-4 shrink-0 fill-amber-400 text-amber-500") }}{% endif %}
+            <span class="flex-1 truncate">{{ car.name }}</span>
+            {% if car.visibility == "private" %}<span class="text-xs text-slate-500 dark:text-slate-400">Only me</span>{% endif %}
+            {% if car.id in selector.due_soon %}<span class="size-2.5 shrink-0 rounded-full bg-red-500" title="Due soon"></span><span class="sr-only">Due soon</span>{% endif %}
+          </button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    <a href="/cars/new" class="flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-sm font-medium text-sky-700 hover:bg-slate-100 dark:text-sky-300 dark:hover:bg-slate-800">
+      {{ icon("plus", "size-5") }} Add a car
+    </a>
+  </div>
+</details>
