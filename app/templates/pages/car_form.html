@@ -20,6 +20,15 @@
     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Shared cars are seen and edited by everyone in the household. An "Only me" car, and everything recorded for it, is hidden from everyone else.</p>
   </fieldset>
   {% endif %}
+  <fieldset class="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+    <legend class="px-1 text-sm font-semibold">Loan (optional)</legend>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {{ field("lender", "Lender", form.lender, e.lender, attrs='autocomplete="off"') }}
+      {{ field("loan_end", "Final payment date", form.loan_end, e.loan_end, type="date") }}
+      {{ field("loan_monthly", "Monthly amount ($)", form.loan_monthly, e.loan_monthly, attrs='inputmode="decimal" autocomplete="off"') }}
+    </div>
+    <p class="text-xs text-slate-500 dark:text-slate-400">The final payment date shows up as a due item. Clear the lender to remove the loan.</p>
+  </fieldset>
   {{ textarea("notes", "Notes", form.notes, e.notes) }}
   <div class="flex flex-wrap gap-2">
     {{ primary_button("Save car") }}

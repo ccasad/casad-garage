@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 from app import audit, cars, documents, nhtsa, storage
 from app.crypto import blind_index
+from app.forms import cents_text, parse_cents, parse_date
 from app.models import Car, Document, User, utcnow
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render, render_partial
@@ -17,6 +18,15 @@ from app.web import render, render_partial
 router = APIRouter()
 
 VIN_RE = re.compile(r"^[A-HJ-NPR-Z0-9]{17}$")
+
+
+def loan_fields(car: Car) -> dict[str, str]:
+    loan = car.loan or {}
+    return {
+        "lender": loan.get("lender", ""),
+        "loan_end": loan.get("final_date", ""),
+        "loan_monthly": cents_text(loan.get("monthly_cents")),
+    }
 
 
 @dataclass
@@ -34,6 +44,9 @@ class CarForm:
     plate: str = ""
     notes: str = ""
     visibility: str = "shared"
+    lender: str = ""
+    loan_end: str = ""
+    loan_monthly: str = ""
     errors: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -50,6 +63,7 @@ class CarForm:
             plate=car.plate or "",
             notes=car.notes or "",
             visibility=car.visibility,
+            **loan_fields(car),
         )
 
     def clean(self) -> None:
@@ -71,6 +85,22 @@ class CarForm:
                 self.errors[name] = f"Keep this under {limit} characters."
         if len(self.plate) > 20:
             self.errors["plate"] = "Keep this under 20 characters."
+        self.lender = self.lender.strip()
+        if any((self.lender, self.loan_end.strip(), self.loan_monthly.strip())):
+            if not self.lender:
+                self.errors["lender"] = "Enter the lender."
+            elif len(self.lender) > 100:
+                self.errors["lender"] = "Keep this under 100 characters."
+            try:
+                if not self.loan_end.strip():
+                    raise ValueError("Enter the final payment date.")
+                parse_date(self.loan_end)
+            except ValueError as exc:
+                self.errors["loan_end"] = str(exc)
+            try:
+                parse_cents(self.loan_monthly)
+            except ValueError as exc:
+                self.errors["loan_monthly"] = str(exc)
         if self.visibility not in ("shared", "private"):
             self.visibility = "shared"
         if len(self.notes) > 4000:
@@ -86,6 +116,15 @@ class CarForm:
         car.color = self.color or None
         car.plate = self.plate or None
         car.notes = self.notes or None
+        car.loan = (
+            {
+                "lender": self.lender,
+                "final_date": self.loan_end.strip(),
+                "monthly_cents": parse_cents(self.loan_monthly),
+            }
+            if self.lender
+            else None
+        )
         car.vin = self.vin or None
         car.vin_hash = blind_index(self.vin) if self.vin else None
 
@@ -102,8 +141,26 @@ def form_dependency(
     plate: Annotated[str, Form(max_length=100)] = "",
     notes: Annotated[str, Form(max_length=8000)] = "",
     visibility: Annotated[str, Form(max_length=10)] = "shared",
+    lender: Annotated[str, Form(max_length=300)] = "",
+    loan_end: Annotated[str, Form(max_length=20)] = "",
+    loan_monthly: Annotated[str, Form(max_length=30)] = "",
 ) -> CarForm:
-    form = CarForm(year, make, model, nickname, vin, trim, engine, color, plate, notes, visibility)
+    form = CarForm(
+        year,
+        make,
+        model,
+        nickname,
+        vin,
+        trim,
+        engine,
+        color,
+        plate,
+        notes,
+        visibility,
+        lender,
+        loan_end,
+        loan_monthly,
+    )
     form.clean()
     return form
 
@@ -208,6 +265,7 @@ def create_car(
     form.apply(car)
     db.add(car)
     db.flush()
+    cars.sync_loan_due(db, car)
     cars.select_car(db, user, car)
     audit.record(db, "car_added", user_id=user.id, car_id=str(car.id), visibility=car.visibility)
     # A car added from an uploaded invoice takes the invoice, and the review continues.
@@ -234,6 +292,7 @@ def update_car(
     if form.errors:
         return car_form_page(request, db, user, form, car)
     form.apply(car)
+    cars.sync_loan_due(db, car)
     # Only the person who added a car can change who sees it (FR-8).
     if car.added_by_id == user.id and form.visibility != car.visibility:
         car.visibility = form.visibility

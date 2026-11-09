@@ -5,13 +5,14 @@ Every query for cars, or anything attached to a car, goes through here, so a pri
 
 import uuid
 from collections.abc import Sequence
+from datetime import date
 
 from fastapi import HTTPException
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app import due, mileage, service, storage
-from app.models import Car, CarStar, Document, ServiceRecord, User, UserPrefs
+from app.models import Car, CarStar, Document, DueItem, ServiceRecord, User, UserPrefs
 from app.service_types import SERVICE_TYPE_LABELS
 
 TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents", "/cars")
@@ -103,6 +104,24 @@ def toggle_star(db: Session, user: User, car: Car) -> bool:
         return False
     db.add(CarStar(user_id=user.id, car_id=car.id))
     return True
+
+
+def sync_loan_due(db: Session, car: Car) -> None:
+    """The loan's final payment date shows as a due item (FR-28)."""
+    item = db.scalar(select(DueItem).where(DueItem.car_id == car.id, DueItem.source == "loan"))
+    loan = car.loan
+    if not loan:
+        if item:
+            db.delete(item)
+        return
+    final = date.fromisoformat(loan["final_date"])
+    if item is None:
+        item = DueItem(car_id=car.id, type="loan_payoff", source="loan")
+        db.add(item)
+    elif item.due_date != final:
+        item.done_at = None  # a new date means it is still ahead
+    item.due_date = final
+    item.notes = f"Final payment to {loan['lender']}"[:200]
 
 
 def can_delete(user: User, car: Car) -> bool:

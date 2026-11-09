@@ -47,6 +47,7 @@ def garage_data(db: Session, user: User) -> dict[str, Any]:
                 "vin": car.vin,
                 "plate": car.plate,
                 "notes": car.notes,
+                "loan": car.loan,
                 "has_photo": bool(car.photo_ref),
                 "mileage_readings": [
                     {"date": iso(r.on), "miles": r.miles}

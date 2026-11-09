@@ -30,7 +30,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - [x] Recommended work from declined jobs (FR-24 to FR-26)
 - [x] Warranties (FR-27)
-- [ ] Loan payoff (FR-28)
+- [x] Loan payoff (FR-28)
 
 ## Users and access
 

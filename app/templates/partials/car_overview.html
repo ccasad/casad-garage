@@ -43,6 +43,12 @@
       <div class="min-w-0"><dt class="text-slate-500 dark:text-slate-400">{{ label }}</dt><dd class="break-words font-medium">{{ value }}</dd></div>
       {% endfor %}
     </dl>
+    {% if car.loan %}
+    <div class="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-800">
+      <p class="font-medium">Loan: {{ car.loan.lender }}</p>
+      <p class="text-slate-600 dark:text-slate-300">Final payment {{ car.loan.final_date }}{% if car.loan.monthly_cents %} · ${{ "{:,.2f}".format(car.loan.monthly_cents / 100) }} a month{% endif %}</p>
+    </div>
+    {% endif %}
     {% if car.notes %}<p class="mt-4 whitespace-pre-line text-sm text-slate-600 dark:text-slate-300">{{ car.notes }}</p>{% endif %}
   </section>
 

@@ -12,9 +12,9 @@
 - Invoice PDF upload, parsing and review (FR-18 to FR-23) — Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - Recommended work from declined jobs (FR-24 to FR-26) — Recommended work from declined jobs (FR-24 to FR-26)
 - Warranties (FR-27) — Warranties (FR-27)
+- Loan payoff (FR-28) — Loan payoff (FR-28)
 
 ## Next
-- Loan payoff (FR-28)
 
 ## Decisions
 - Navigation tabs act on the user's remembered selected car (stored per user in user_prefs), so tab URLs have no car id.
@@ -34,6 +34,7 @@
 - If every job on an invoice was declined, saving the review adds only recommended-work items and the odometer reading (no empty service record).
 - Recommended work: the To do tab total sums quoted prices of open items (items without a price are counted separately). Dismissed or done items can be reopened from the collapsed history.
 - Warranty: each service item can carry months and/or miles; the app keeps one 'warranty ends' due item per such item (end date = service date + months, clamped to month end; end mileage = service mileage + warranty miles). These items follow the service record: they can be marked done but not edited or deleted on the Due tab.
+- Loan: stored encrypted on the car (lender, final date, monthly amount); the final payment date is also kept as a plain 'loan payoff' due item (the app needs to sort and flag it), which follows the car's loan and can be marked done but not edited on the Due tab.
 
 ## Needs a human
 - Create a Vercel Blob store and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.

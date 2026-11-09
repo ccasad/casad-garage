@@ -210,6 +210,8 @@ class Car(Base):
     vin_hash: Mapped[bytes | None] = mapped_column(LargeBinary, index=True)
     plate: Mapped[str | None] = mapped_column(EncryptedText)
     notes: Mapped[str | None] = mapped_column(EncryptedText)
+    # The loan, if any (FR-28): {"lender", "final_date" (ISO), "monthly_cents"}. Encrypted.
+    loan: Mapped[dict[str, Any] | None] = mapped_column(EncryptedJSON)
     # Reference to the photo in file storage; the file is only served through the app.
     photo_ref: Mapped[str | None] = mapped_column(String(500))
     photo_updated_at: Mapped[datetime | None]
