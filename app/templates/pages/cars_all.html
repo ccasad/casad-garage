@@ -17,6 +17,12 @@
         <span class="mt-1 block text-sm">{% if m %}{{ "{:,}".format(m.miles) }} mi{% else %}No mileage yet{% endif %}</span>
       </button>
     </form>
+    {% for item, state in cards.due_soon.get(c.id, []) %}
+    <p class="mt-1 rounded-lg px-3 py-1 text-sm {{ 'bg-red-50 text-red-800 dark:bg-red-950 dark:text-red-200' if state == 'overdue' else 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200' }}">
+      {{ cards.due_labels.get(item.type, item.type) }}{% if state == "overdue" %} overdue{% endif %}:
+      {% if item.due_date %}{{ item.due_date.strftime("%b %-d, %Y") }}{% endif %}{% if item.due_date and item.due_miles is not none %}, {% endif %}{% if item.due_miles is not none %}{{ "{:,}".format(item.due_miles) }} mi{% endif %}
+    </p>
+    {% endfor %}
   </li>
   {% endfor %}
 </ul>

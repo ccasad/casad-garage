@@ -293,3 +293,24 @@ class ServiceItem(Base):
     cost_cents: Mapped[int | None]
 
     record: Mapped[ServiceRecord] = relationship(back_populates="items")
+
+
+class DueItem(Base):
+    """Something coming up for a car: a date and/or a mileage (FR-15)."""
+
+    __tablename__ = "due_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    car_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cars.id", ondelete="CASCADE"), index=True)
+    type: Mapped[str] = mapped_column(String(30))
+    due_date: Mapped[date | None] = mapped_column(Date)
+    due_miles: Mapped[int | None]
+    notes: Mapped[str | None] = mapped_column(EncryptedText)
+    done_at: Mapped[datetime | None]
+    # "manual", or "loan" / "warranty" for items the app keeps in step with the car's loan
+    # and a service item's warranty.
+    source: Mapped[str] = mapped_column(String(10), default="manual", server_default="manual")
+    service_item_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("service_items.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)

@@ -1,0 +1,14 @@
+{#- A due item line. Needs `item`, `state` ('overdue', 'soon' or none), `miles` (current mileage), `type_labels`. -#}
+{% set tone = {"overdue": "border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/60", "soon": "border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/60"}.get(state, "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900") %}
+<div class="rounded-xl border p-3 {{ tone }}">
+  <p class="font-semibold">{{ type_labels.get(item.type, item.type) }}
+    {% if state == "overdue" %}<span class="ml-1 rounded bg-red-600 px-1.5 py-0.5 text-xs font-semibold text-white">Overdue</span>
+    {% elif state == "soon" %}<span class="ml-1 rounded bg-amber-500 px-1.5 py-0.5 text-xs font-semibold text-slate-950">Due soon</span>{% endif %}
+  </p>
+  <p class="text-sm text-slate-600 dark:text-slate-300">
+    {% if item.due_date %}<time datetime="{{ item.due_date.isoformat() }}">{{ item.due_date.strftime("%b %-d, %Y") }}</time>{% endif %}
+    {% if item.due_date and item.due_miles is not none %} · {% endif %}
+    {% if item.due_miles is not none %}at {{ "{:,}".format(item.due_miles) }} mi{% if miles is not none and not item.done_at %} ({{ "{:,}".format((item.due_miles - miles) | abs) }} mi {{ "over" if miles >= item.due_miles else "to go" }}){% endif %}{% endif %}
+  </p>
+  {% if item.notes %}<p class="mt-1 whitespace-pre-line text-sm text-slate-500 dark:text-slate-400">{{ item.notes }}</p>{% endif %}
+</div>

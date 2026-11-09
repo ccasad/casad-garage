@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, textarea, select, primary_button, secondary_link %}
+{% block content %}
+<form method="post" action="{{ '/due/' ~ item.id ~ '/edit' if item else '/cars/' ~ car.id ~ '/due' }}" hx-boost="false" class="max-w-xl space-y-4">
+  <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+  {% if errors %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted fields and save again.</p>{% endif %}
+  {{ select("type", "Type", due_types, values.type, errors.type) }}
+  <div class="grid grid-cols-2 gap-4">
+    {{ field("due_date", "Due date", values.due_date, errors.due_date, type="date") }}
+    {{ field("due_miles", "Due at miles", values.due_miles, errors.due_miles, attrs='inputmode="numeric" autocomplete="off"') }}
+  </div>
+  {{ textarea("notes", "Notes", values.notes, errors.notes) }}
+  <div class="flex gap-2">{{ primary_button("Save") }}{{ secondary_link("Cancel", "/due") }}</div>
+</form>
+{% endblock %}

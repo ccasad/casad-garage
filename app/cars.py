@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
-from app import mileage, service, storage
+from app import due, mileage, service, storage
 from app.models import Car, User, UserPrefs
 from app.service_types import SERVICE_TYPE_LABELS
 
@@ -80,8 +80,15 @@ def overview_context(db: Session, car: Car) -> dict:
         "current": mileage.current_mileage(db, [car.id]).get(car.id),
         "last_done": service.last_done(records),
         "type_labels": SERVICE_TYPE_LABELS,
+        "due_labels": due.DUE_TYPE_LABELS,
+        "due_soon": due.due_soon_by_car(db, [car.id]).get(car.id, []),
     }
 
 
 def card_context(db: Session, cars_: Sequence[Car]) -> dict:
-    return {"mileage": mileage.current_mileage(db, [c.id for c in cars_])}
+    ids = [c.id for c in cars_]
+    return {
+        "mileage": mileage.current_mileage(db, ids),
+        "due_soon": due.due_soon_by_car(db, ids),
+        "due_labels": due.DUE_TYPE_LABELS,
+    }

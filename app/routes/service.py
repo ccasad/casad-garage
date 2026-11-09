@@ -2,14 +2,16 @@
 (FR-12, FR-13)."""
 
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app import cars, service
-from app.models import Car, ServiceRecord
+from app import cars, due, service
+from app.forms import parse_date, parse_miles
+from app.models import Car, DueItem, ServiceRecord
 from app.service_types import SERVICE_TYPE_LABELS, SERVICE_TYPES
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render
@@ -120,8 +122,33 @@ async def create(
     if form.errors:
         return form_page(request, db, user, car, form)
     record = service.save_record(db, car, form)
+    # The work is done, so any open due item of the same kind is closed (FR-16).
+    due.close_open(db, car.id, {i.type for i in record.items} & set(due.FOLLOW_UP_TYPES))
     db.commit()
     return RedirectResponse(f"/service/{record.id}?saved=1", status_code=303)
+
+
+def offers(record: ServiceRecord) -> list[dict]:
+    """Next-due suggestions for inspection and oil-change items (FR-16)."""
+    out = []
+    for type_ in due.FOLLOW_UP_TYPES:
+        if any(i.type == type_ for i in record.items):
+            months = 6 if type_ == "oil_change" else 12
+            year, month = divmod(record.on.month - 1 + months, 12)
+            day = min(record.on.day, 28)
+            out.append(
+                {
+                    "type": type_,
+                    "label": due.DUE_TYPE_LABELS[type_],
+                    "date": record.on.replace(
+                        year=record.on.year + year, month=month + 1, day=day
+                    ).isoformat(),
+                    "miles": str(record.miles + 5000)
+                    if type_ == "oil_change" and record.miles
+                    else "",
+                }
+            )
+    return out
 
 
 @router.get("/service/{record_id}", response_class=HTMLResponse)
@@ -141,6 +168,8 @@ def detail(
         record=record,
         type_labels=SERVICE_TYPE_LABELS,
         saved=bool(saved),
+        offers=offers(record) if saved else [],
+        errors={},
     )
 
 
@@ -173,3 +202,29 @@ def delete(db: DbSession, user: SignedInUser, record_id: uuid.UUID) -> RedirectR
     db.delete(record)
     db.commit()
     return RedirectResponse("/service", status_code=303)
+
+
+@router.post("/service/{record_id}/next-due", dependencies=[Depends(same_origin)])
+def set_next_due(
+    db: DbSession,
+    user: SignedInUser,
+    record_id: uuid.UUID,
+    type: Annotated[str, Form(max_length=30)] = "",
+    due_date: Annotated[str, Form(max_length=20)] = "",
+    due_miles: Annotated[str, Form(max_length=20)] = "",
+) -> RedirectResponse:
+    """Set the next due date or mileage after an inspection or oil change (FR-16)."""
+    record = get_record(db, user, record_id)
+    if type not in due.FOLLOW_UP_TYPES or not any(i.type == type for i in record.items):
+        raise HTTPException(status_code=422, detail="That service has no such item")
+    try:
+        new_date = parse_date(due_date, required=False)
+        new_miles = parse_miles(due_miles, required=False)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    if new_date is None and new_miles is None:
+        raise HTTPException(status_code=422, detail="Enter a due date or a due mileage")
+    due.close_open(db, record.car_id, [type])
+    db.add(DueItem(car_id=record.car_id, type=type, due_date=new_date, due_miles=new_miles))
+    db.commit()
+    return RedirectResponse("/due", status_code=303)

@@ -1,6 +1,17 @@
 {% from "partials/icons.html" import icon %}
 {% from "partials/car_photo.html" import car_photo %}
 <div class="max-w-3xl space-y-6">
+  {% if due_soon %}
+  <section aria-label="Due soon" class="space-y-2">
+    {% for item, state in due_soon %}
+    <a href="/due" class="block rounded-xl border px-4 py-3 text-sm {{ 'border-red-300 bg-red-50 dark:border-red-900 dark:bg-red-950/60' if state == 'overdue' else 'border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/60' }}">
+      <span class="font-semibold">{{ due_labels.get(item.type, item.type) }}{% if state == "overdue" %} overdue{% else %} due soon{% endif %}</span>
+      <span class="text-slate-600 dark:text-slate-300">· {% if item.due_date %}{{ item.due_date.strftime("%b %-d, %Y") }}{% endif %}{% if item.due_date and item.due_miles is not none %}, {% endif %}{% if item.due_miles is not none %}{{ "{:,}".format(item.due_miles) }} mi{% endif %}</span>
+    </a>
+    {% endfor %}
+  </section>
+  {% endif %}
+
   <section class="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
     {{ car_photo(car, "mb-4 h-48 w-full sm:h-64") }}
     <div class="mb-4">
