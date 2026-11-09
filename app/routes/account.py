@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app import audit, exporter
+from app import audit, cars, exporter
 from app.config import get_settings
 from app.models import User
 from app.sessions import SESSION_COOKIE, DbSession, SignedInUser, same_origin
@@ -100,6 +100,7 @@ def delete_account(
     audit.record(db, "account_deleted")
     # Cascades to passkeys, sessions and everything else the user owns
     # (give new tables ForeignKey("users.id", ondelete="CASCADE")).
+    cars.delete_user_files(db, user)
     db.delete(user)
     db.commit()
     response = RedirectResponse("/login?notice=deleted", status_code=303)

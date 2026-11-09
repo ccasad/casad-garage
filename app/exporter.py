@@ -10,8 +10,10 @@ from sqlalchemy.orm import Session
 from app import cars
 from app.forms import cents_text
 from app.models import (
+    Document,
     DueItem,
     MileageReading,
+    RecommendedItem,
     ServiceRecord,
     User,
     UserPrefs,
@@ -78,6 +80,24 @@ def garage_data(db: Session, user: User) -> dict[str, Any]:
                         .order_by(ServiceRecord.on.desc())
                     )
                 ],
+                "documents": [
+                    {"filename": d.filename, "uploaded_at": iso(d.created_at), "kind": d.kind}
+                    for d in db.scalars(select(Document).where(Document.car_id == car.id))
+                ],
+                "recommended_work": [
+                    {
+                        "description": r.description,
+                        "shop_note": r.shop_note,
+                        "quoted_price": cents_text(r.price_cents),
+                        "recommended_on": iso(r.recommended_on),
+                        "recommended_miles": r.recommended_miles,
+                        "status": r.status,
+                        "closed_at": iso(r.closed_at),
+                    }
+                    for r in db.scalars(
+                        select(RecommendedItem).where(RecommendedItem.car_id == car.id)
+                    )
+                ],
                 "due_items": [
                     {
                         "type": d.type,
@@ -90,8 +110,14 @@ def garage_data(db: Session, user: User) -> dict[str, Any]:
                 ],
             }
         )
+    unmatched = db.scalars(
+        select(Document).where(Document.car_id.is_(None), Document.uploaded_by_id == user.id)
+    )
     return {
         "cars": exported_cars,
+        "unmatched_documents": [
+            {"filename": d.filename, "uploaded_at": iso(d.created_at)} for d in unmatched
+        ],
         "preferences": {
             "selected_car": next(
                 (c.name for c in visible if prefs and c.id == prefs.selected_car_id), None

@@ -4,6 +4,7 @@
 {% block content %}
 {% set e = form.errors %}
 <form method="post" action="{{ '/cars/' ~ car.id ~ '/edit' if car else '/cars' }}" hx-boost="false" class="max-w-2xl space-y-4">
+  {% if invoice_id %}<input type="hidden" name="invoice" value="{{ invoice_id }}"><p class="rounded-xl border border-sky-300 bg-sky-50 px-4 py-3 text-sm dark:border-sky-800 dark:bg-sky-950">Filled in from the invoice. Check the details, then save to continue the import.</p>{% endif %}
   {% if e %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted fields and save again.</p>{% endif %}
   {% include "partials/car_fields.html" %}
   {% if can_set_visibility %}

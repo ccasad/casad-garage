@@ -9,14 +9,21 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-from app import cars, due, service
+from app import cars, documents, due, service
 from app.forms import parse_date, parse_miles
-from app.models import Car, DueItem, ServiceRecord
+from app.models import Car, Document, DueItem, ServiceRecord
 from app.service_types import SERVICE_TYPE_LABELS, SERVICE_TYPES
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render
 
 router = APIRouter()
+
+# Why an uploaded invoice opened an empty record instead of the review screen (FR-22).
+NOTICES = {
+    "empty": "The PDF has no readable text (a scan or photo?). It's attached to this car; fill in the record by hand.",
+    "layout": "This invoice layout isn't recognised. It's attached to this car; fill in the record by hand.",
+    "unreadable": "That file couldn't be read as a PDF. It's attached to this car; fill in the record by hand.",
+}
 
 
 def get_record(db: DbSession, user: SignedInUser, record_id: uuid.UUID) -> ServiceRecord:
@@ -39,10 +46,12 @@ def form_page(
     car: Car,
     form: service.ServiceForm,
     record: ServiceRecord | None = None,
+    notice: str = "",
 ) -> HTMLResponse:
     return render(
         request,
         "pages/service_form.html",
+        notice=notice,
         title="Edit service" if record else "Log a service",
         user=user,
         active="service",
@@ -55,7 +64,7 @@ def form_page(
     )
 
 
-async def read_form(request: Request) -> service.ServiceForm:
+async def read_form(request: Request, *, allow_no_items: bool = False) -> service.ServiceForm:
     data = await request.form()
     text = lambda key: str(data.get(key, ""))[:8000]
     lists = lambda key: [str(v)[:500] for v in data.getlist(key)][:60]
@@ -66,6 +75,7 @@ async def read_form(request: Request) -> service.ServiceForm:
         ro_number=text("ro_number"),
         total=text("total"),
         notes=text("notes"),
+        document_id=text("document_id")[:40],
         items=service.build_items(
             lists("item_id"),
             lists("item_description"),
@@ -74,7 +84,7 @@ async def read_form(request: Request) -> service.ServiceForm:
             lists("item_cost"),
         ),
     )
-    return form.clean()
+    return form.clean(allow_no_items=allow_no_items)
 
 
 @router.get("/service", response_class=HTMLResponse, name="service")
@@ -84,6 +94,7 @@ def service_tab(
     user: SignedInUser,
     type: str = "",
     q: str = "",
+    notice: str = "",
 ) -> HTMLResponse:
     car = cars.selected_car(db, user)
     records = service.records_for_car(db, car.id) if car else []
@@ -102,15 +113,31 @@ def service_tab(
         type_labels=SERVICE_TYPE_LABELS,
         filter_type=type,
         filter_q=q,
+        notice=UPLOAD_NOTICES.get(notice, ""),
     )
 
 
 @router.get("/service/new", response_class=HTMLResponse)
-def new_form(request: Request, db: DbSession, user: SignedInUser) -> Response:
+def new_form(
+    request: Request, db: DbSession, user: SignedInUser, document: str = "", notice: str = ""
+) -> Response:
     car = cars.selected_car(db, user)
     if car is None:
         return RedirectResponse("/service", status_code=303)
-    return form_page(request, db, user, car, service.ServiceForm())
+    form = service.ServiceForm()
+    if attached_document(db, user, car, document):
+        form.document_id = document
+    return form_page(request, db, user, car, form, notice=NOTICES.get(notice, ""))
+
+
+def attached_document(db, user, car: Car, document_id: str) -> Document | None:
+    """The uploaded invoice named by the form, if it belongs to this car and the user can see it."""
+    try:
+        doc_id = uuid.UUID(document_id)
+    except ValueError:
+        return None
+    doc = documents.get_document(db, user, doc_id, missing_ok=True)
+    return doc if doc is not None and doc.car_id == car.id else None
 
 
 @router.post("/cars/{car_id}/service", dependencies=[Depends(same_origin)])
@@ -121,7 +148,8 @@ async def create(
     form = await read_form(request)
     if form.errors:
         return form_page(request, db, user, car, form)
-    record = service.save_record(db, car, form)
+    doc = attached_document(db, user, car, form.document_id)
+    record = service.save_record(db, car, form, document_id=doc.id if doc else None)
     # The work is done, so any open due item of the same kind is closed (FR-16).
     due.close_open(db, car.id, {i.type for i in record.items} & set(due.FOLLOW_UP_TYPES))
     db.commit()
@@ -228,3 +256,11 @@ def set_next_due(
     db.add(DueItem(car_id=record.car_id, type=type, due_date=new_date, due_miles=new_miles))
     db.commit()
     return RedirectResponse("/due", status_code=303)
+
+
+UPLOAD_NOTICES = {
+    "type": "That file isn't a PDF.",
+    "size": "That PDF is larger than 10 MB.",
+    "storage": "The file couldn't be saved. Try again.",
+    "no-car": "Pick a car (top right) before uploading an invoice.",
+}

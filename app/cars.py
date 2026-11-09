@@ -11,7 +11,7 @@ from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
 from app import due, mileage, service, storage
-from app.models import Car, CarStar, ServiceRecord, User, UserPrefs
+from app.models import Car, CarStar, Document, ServiceRecord, User, UserPrefs
 from app.service_types import SERVICE_TYPE_LABELS
 
 TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents", "/cars")
@@ -112,6 +112,17 @@ def can_delete(user: User, car: Car) -> bool:
 def delete_car_files(db: Session, car: Car) -> None:
     """Remove stored files (photo, invoices) before the rows go."""
     storage.remove(car.photo_ref)
+    for ref in db.scalars(select(Document.storage_ref).where(Document.car_id == car.id)):
+        storage.remove(ref)
+
+
+def delete_user_files(db: Session, user: User) -> None:
+    """Remove the stored files of everything an account deletion will cascade away:
+    photos and invoices of the cars the user added, and invoices they uploaded."""
+    for car in db.scalars(select(Car).where(Car.added_by_id == user.id)):
+        delete_car_files(db, car)
+    for ref in db.scalars(select(Document.storage_ref).where(Document.uploaded_by_id == user.id)):
+        storage.remove(ref)
 
 
 def overview_context(db: Session, car: Car) -> dict:

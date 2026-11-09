@@ -284,6 +284,10 @@ class ServiceRecord(Base):
     ro_number: Mapped[str | None] = mapped_column(String(40))
     total_cents: Mapped[int | None]
     notes: Mapped[str | None] = mapped_column(EncryptedText)
+    # The invoice PDF this record was imported from.
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
 
     items: Mapped[list["ServiceItem"]] = relationship(
@@ -327,5 +331,56 @@ class DueItem(Base):
     source: Mapped[str] = mapped_column(String(10), default="manual", server_default="manual")
     service_item_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("service_items.id", ondelete="CASCADE"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class Document(Base):
+    """An uploaded invoice PDF. The file is in private storage; only a reference is kept.
+
+    Until it is matched to a car, only the person who uploaded it can see it."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    car_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("cars.id", ondelete="CASCADE"), index=True
+    )
+    uploaded_by_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[str] = mapped_column(String(20), default="invoice")
+    filename: Mapped[str] = mapped_column(EncryptedText)
+    storage_ref: Mapped[str] = mapped_column(String(500))
+    size_bytes: Mapped[int]
+    # "review": parsed and waiting for the user to check it; "attached": kept with the car
+    # without an import (not recognised, or already imported).
+    status: Mapped[str] = mapped_column(String(10), default="attached")
+    # What the parser found (vehicle and jobs only), kept only until the review is saved.
+    parsed: Mapped[dict[str, Any] | None] = mapped_column(EncryptedJSON)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class RecommendedItem(Base):
+    """Work a shop recommended that hasn't been done yet (FR-24)."""
+
+    __tablename__ = "recommended_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    car_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cars.id", ondelete="CASCADE"), index=True)
+    description: Mapped[str] = mapped_column(String(200))
+    shop_note: Mapped[str | None] = mapped_column(EncryptedText)
+    price_cents: Mapped[int | None]
+    recommended_on: Mapped[date | None] = mapped_column(Date)
+    recommended_miles: Mapped[int | None]
+    # "open", "done" or "dismissed"
+    status: Mapped[str] = mapped_column(String(10), default="open", server_default="open")
+    closed_at: Mapped[datetime | None]
+    # The service record that did the work, when linked.
+    done_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("service_records.id", ondelete="SET NULL")
+    )
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("documents.id", ondelete="SET NULL")
     )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)

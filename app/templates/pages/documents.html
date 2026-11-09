@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon, empty_state %}
+{% block content %}
+{% if not car %}
+{% include "partials/pick_a_car.html" %}
+{% else %}
+<div class="max-w-2xl space-y-4">
+  <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+  {% if docs %}
+  <ul class="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+    {% for d in docs %}
+    <li class="flex min-h-[56px] items-center gap-3 px-4 py-2">
+      <span class="text-slate-500">{{ icon("file", "size-6") }}</span>
+      <div class="min-w-0 flex-1">
+        <p class="truncate font-medium">{{ d.filename }}</p>
+        <p class="text-sm text-slate-500 dark:text-slate-400">Uploaded <time datetime="{{ d.created_at.isoformat() }}" data-local="date">{{ d.created_at.strftime("%b %-d, %Y") }}</time>{% if d.status == "review" %} · not imported yet{% endif %}</p>
+      </div>
+      {% if d.status == "review" %}<a href="/invoices/{{ d.id }}/review" class="inline-flex min-h-[44px] items-center px-2 text-sm font-medium text-sky-700 dark:text-sky-300">Review</a>{% endif %}
+      <a href="/documents/{{ d.id }}/file" target="_blank" rel="noopener" hx-boost="false" class="inline-flex min-h-[44px] items-center px-2 text-sm font-medium text-sky-700 dark:text-sky-300">Open</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  {{ empty_state("No documents", "Invoices you upload from the Service tab are kept here.", "file", "amber") }}
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

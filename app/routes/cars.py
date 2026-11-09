@@ -8,9 +8,9 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from app import audit, cars, nhtsa, storage
+from app import audit, cars, documents, nhtsa, storage
 from app.crypto import blind_index
-from app.models import Car, User, utcnow
+from app.models import Car, Document, User, utcnow
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render, render_partial
 
@@ -112,7 +112,12 @@ SubmittedCar = Annotated[CarForm, Depends(form_dependency)]
 
 
 def car_form_page(
-    request: Request, db: DbSession, user: User, form: CarForm, car: Car | None
+    request: Request,
+    db: DbSession,
+    user: User,
+    form: CarForm,
+    car: Car | None,
+    invoice_id: str = "",
 ) -> HTMLResponse:
     return render(
         request,
@@ -123,6 +128,7 @@ def car_form_page(
         db=db,
         form=form,
         car=car,
+        invoice_id=invoice_id,
         can_set_visibility=car is None or car.added_by_id == user.id,
         status_code=422 if form.errors else 200,
     )
@@ -159,23 +165,57 @@ def all_cars(request: Request, db: DbSession, user: SignedInUser) -> HTMLRespons
     )
 
 
+def pending_invoice(db: DbSession, user: User, invoice_id: str) -> Document | None:
+    """An uploaded invoice of this user's that still needs a car."""
+    try:
+        doc = documents.get_document(db, user, uuid.UUID(invoice_id), missing_ok=True)
+    except ValueError:
+        return None
+    if doc is None or doc.car_id is not None or doc.status != "review" or not doc.parsed:
+        return None
+    return doc
+
+
 @router.get("/cars/new", response_class=HTMLResponse)
-def new_car_form(request: Request, db: DbSession, user: SignedInUser) -> HTMLResponse:
-    return car_form_page(request, db, user, CarForm(), None)
+def new_car_form(
+    request: Request, db: DbSession, user: SignedInUser, invoice: str = ""
+) -> HTMLResponse:
+    form = CarForm()
+    doc = pending_invoice(db, user, invoice) if invoice else None
+    if doc:
+        parsed = doc.parsed
+        form = CarForm(
+            year=parsed.get("year", ""),
+            make=parsed.get("make", ""),
+            model=parsed.get("model", ""),
+            trim=parsed.get("trim", ""),
+            vin=parsed.get("vin", ""),
+        )
+    return car_form_page(request, db, user, form, None, invoice_id=str(doc.id) if doc else "")
 
 
 @router.post("/cars", dependencies=[Depends(same_origin)])
-def create_car(request: Request, db: DbSession, user: SignedInUser, form: SubmittedCar) -> Response:
+def create_car(
+    request: Request,
+    db: DbSession,
+    user: SignedInUser,
+    form: SubmittedCar,
+    invoice: Annotated[str, Form(max_length=40)] = "",
+) -> Response:
     if form.errors:
-        return car_form_page(request, db, user, form, None)
+        return car_form_page(request, db, user, form, None, invoice_id=invoice)
     car = Car(added_by_id=user.id, year=0, make="", model="", visibility=form.visibility)
     form.apply(car)
     db.add(car)
     db.flush()
     cars.select_car(db, user, car)
     audit.record(db, "car_added", user_id=user.id, car_id=str(car.id), visibility=car.visibility)
+    # A car added from an uploaded invoice takes the invoice, and the review continues.
+    doc = pending_invoice(db, user, invoice) if invoice else None
+    if doc:
+        doc.car_id = car.id
     db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse(f"/invoices/{doc.id}/review" if doc else "/", status_code=303)
 
 
 @router.get("/cars/{car_id}/edit", response_class=HTMLResponse)

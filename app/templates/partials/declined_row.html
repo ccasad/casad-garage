@@ -1,0 +1,21 @@
+{#- One recommended-work row on the invoice review screen. `row` may be None for a blank template row. -#}
+<div data-item-row class="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+  <div>
+    <label class="mb-1 block text-sm font-medium">Description</label>
+    <input name="rec_description" value="{{ row.description if row else '' }}" maxlength="200" autocomplete="off"
+           class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+  </div>
+  <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+    <div class="sm:col-span-2">
+      <label class="mb-1 block text-sm font-medium">Shop's note</label>
+      <input name="rec_note" value="{{ row.note if row else '' }}" maxlength="1000" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
+    <div>
+      <label class="mb-1 block text-sm font-medium">Quoted price ($)</label>
+      <input name="rec_price" value="{{ row.price if row else '' }}" inputmode="decimal" autocomplete="off"
+             class="min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    </div>
+  </div>
+  <button type="button" data-remove-row class="min-h-[44px] text-sm font-medium text-red-600 dark:text-red-400">Remove</button>
+</div>

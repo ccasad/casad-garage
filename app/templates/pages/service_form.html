@@ -5,6 +5,8 @@
 {% set e = form.errors %}
 <form method="post" action="{{ '/service/' ~ record.id ~ '/edit' if record else '/cars/' ~ car.id ~ '/service' }}" hx-boost="false" class="max-w-2xl space-y-4">
   <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+  <input type="hidden" name="document_id" value="{{ form.document_id }}">
+  {% if notice %}<p role="status" class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950">{{ notice }}</p>{% endif %}
   {% if e %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted parts and save again.</p>{% endif %}
   <div class="grid grid-cols-2 gap-4">
     {{ field("on", "Date", form.on, e.on, type="date", required=True, attrs="data-today") }}

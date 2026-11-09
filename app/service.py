@@ -33,6 +33,7 @@ class ServiceForm:
     ro_number: str = ""
     total: str = ""
     notes: str = ""
+    document_id: str = ""
     items: list[ItemInput] = field(default_factory=lambda: [ItemInput()])
     errors: dict[str, str] = field(default_factory=dict)
     on_date: date | None = None
@@ -55,7 +56,7 @@ class ServiceForm:
             or [ItemInput()],
         )
 
-    def clean(self) -> "ServiceForm":
+    def clean(self, *, allow_no_items: bool = False) -> "ServiceForm":
         self.shop, self.ro_number = self.shop.strip(), self.ro_number.strip()
         try:
             self.on_date = parse_date(self.on)
@@ -89,7 +90,7 @@ class ServiceForm:
                 item.cost_cents = parse_cents(item.cost)
             except ValueError:
                 self.errors.setdefault("rows", "Item costs must be amounts like 89.99.")
-        if not kept and "rows" not in self.errors:
+        if not kept and not allow_no_items and "rows" not in self.errors:
             self.errors.setdefault("rows", "Add at least one item.")
         self.items = kept or [ItemInput()]
         return self
@@ -109,11 +110,15 @@ def build_items(
 
 
 def save_record(
-    db: Session, car: Car, form: ServiceForm, record: ServiceRecord | None = None
+    db: Session,
+    car: Car,
+    form: ServiceForm,
+    record: ServiceRecord | None = None,
+    document_id: uuid.UUID | None = None,
 ) -> ServiceRecord:
     """Create or update a record from a cleaned form, and keep its odometer reading."""
     if record is None:
-        record = ServiceRecord(car_id=car.id, on=form.on_date)
+        record = ServiceRecord(car_id=car.id, on=form.on_date, document_id=document_id)
         db.add(record)
     record.on = form.on_date
     record.miles = form.miles_value

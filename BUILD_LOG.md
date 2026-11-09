@@ -9,9 +9,9 @@
 - Due dates and "Due soon" (FR-15 to FR-17) — Due dates and "Due soon" (FR-15 to FR-17)
 - Private cars ("Only me") (FR-8) — Private cars ("Only me") (FR-8)
 - Starred cars and sorting (FR-9) — Starred cars and sorting (FR-9)
+- Invoice PDF upload, parsing and review (FR-18 to FR-23) — Invoice PDF upload, parsing and review (FR-18 to FR-23)
 
 ## Next
-- Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - Recommended work from declined jobs (FR-24 to FR-26)
 - Warranties (FR-27)
 - Loan payoff (FR-28)
@@ -28,6 +28,10 @@
 - Today's date for 'due soon' is the server's UTC date.
 - Data download: includes every car the user can see (their own, including 'Only me', plus shared ones) with its records; it never includes another person's 'Only me' car. Deleting an account also deletes the cars that person added, shared or not.
 - Sort choices are Name, Year (newest first) and Recently serviced (never-serviced cars last); starred cars always come first.
+- Invoice parser: shop name is the first line of the text; job totals are read from the status line or the line right after it; the posted date and odometer-in become the record's date and mileage; a job's shop note and Note paragraph go to the record notes (approved) or the recommended item's note (declined). It was only exercised on an invented fixture in the documented layout, built with reportlab (dev dependency); real PDFs may extract differently.
+- Uploads: the server accepts PDFs up to 10 MB, but Vercel caps serverless request bodies at 4.5 MB, so larger invoices will be refused on Hobby (photos are resized to stay well under).
+- An uploaded invoice that matches no visible car is visible only to its uploader until a car is chosen; the parsed data is kept (encrypted) only until the review is saved. Uploaded filenames are stored encrypted.
+- If every job on an invoice was declined, saving the review adds only recommended-work items and the odometer reading (no empty service record).
 
 ## Needs a human
 - Create a Vercel Blob store and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.

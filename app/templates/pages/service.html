@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "partials/icons.html" import icon, empty_state %}
 {% block content %}
+{% if notice %}<p role="alert" class="mb-4 max-w-3xl rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950">{{ notice }}</p>{% endif %}
 {% if not car %}
 {% include "partials/pick_a_car.html" %}
 {% else %}
@@ -8,9 +9,14 @@
   <div class="flex flex-wrap items-center justify-between gap-2">
     <p class="min-w-0 truncate text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
     <div class="flex flex-wrap gap-2">
-      {% block service_actions %}
+      <form method="post" action="/invoices" enctype="multipart/form-data" hx-boost="false">
+        <input type="hidden" name="car_id" value="{{ car.id }}">
+        <label class="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">
+          {{ icon("upload", "size-5") }} Upload invoice
+          <input type="file" name="invoice" accept="application/pdf,.pdf" class="sr-only" onchange="this.form.submit()">
+        </label>
+      </form>
       <a href="/service/new" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white dark:bg-sky-500 dark:text-slate-950">{{ icon("plus", "size-5") }} Log a service</a>
-      {% endblock %}
     </div>
   </div>
 

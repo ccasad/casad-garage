@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, textarea, primary_button, secondary_link %}
+{% from "partials/icons.html" import icon %}
+{% block content %}
+{% set e = form.errors %}
+{% if not car %}
+<div class="max-w-xl space-y-4">
+  <p class="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm dark:border-amber-800 dark:bg-amber-950">No car you can see matches this invoice's VIN. Which car is it for?</p>
+  <form method="post" action="/invoices/{{ doc.id }}/car" hx-boost="false" class="space-y-2">
+    {% for c in choices %}
+    <label class="flex min-h-[44px] cursor-pointer items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-800 dark:bg-slate-900">
+      <input type="radio" name="car_id" value="{{ c.id }}" required> <span>{{ c.name }}</span>
+    </label>
+    {% endfor %}
+    <div class="flex flex-wrap gap-2 pt-2">
+      {% if choices %}{{ primary_button("Use this car") }}{% endif %}
+      <a href="/cars/new?invoice={{ doc.id }}" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ icon("plus", "size-5") }} Add a new car from this invoice</a>
+    </div>
+  </form>
+</div>
+{% else %}
+<form method="post" action="/invoices/{{ doc.id }}/save" hx-boost="false" class="max-w-2xl space-y-6">
+  <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }} · nothing is saved until you press Save.</p>
+  <input type="hidden" name="document_id" value="{{ form.document_id }}">
+  {% if e or row_errors %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted parts and save again.{% if row_errors %} {{ row_errors }}{% endif %}</p>{% endif %}
+  {% if duplicate %}
+  <div role="alert" class="rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm dark:border-amber-700 dark:bg-amber-950">
+    <p class="font-semibold">This looks like a duplicate.</p>
+    <p class="mt-1">A service record from {{ duplicate.shop or "this shop" }} with repair order {{ duplicate.ro_number }} already exists (<a class="underline" href="/service/{{ duplicate.id }}">view it</a>).</p>
+    <label class="mt-3 flex min-h-[44px] items-center gap-2 font-medium"><input type="checkbox" name="confirm_duplicate" value="yes" class="size-5"> Save it anyway</label>
+  </div>
+  {% endif %}
+
+  <section class="space-y-4">
+    <h2 class="font-semibold">Service record</h2>
+    <div class="grid grid-cols-2 gap-4">
+      {{ field("on", "Date", form.on, e.on, type="date", required=True) }}
+      {{ field("miles", "Mileage", form.miles, e.miles, attrs='inputmode="numeric" autocomplete="off"') }}
+    </div>
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {{ field("shop", "Shop", form.shop, e.shop, attrs='autocomplete="off"') }}
+      {{ field("ro_number", "Repair order number", form.ro_number, e.ro_number, attrs='autocomplete="off"') }}
+    </div>
+    <fieldset class="space-y-3">
+      <legend class="mb-1 text-sm font-semibold">Approved jobs</legend>
+      {% if e.rows %}<p class="text-sm text-red-600 dark:text-red-400">{{ e.rows }}</p>{% endif %}
+      <div id="items" class="space-y-3">
+        {% for item in form.items %}{% include "partials/service_item_row.html" %}{% endfor %}
+      </div>
+      <template id="item-template">{% set item = None %}{% include "partials/service_item_row.html" %}</template>
+      <button type="button" data-add-row="items" data-template="item-template"
+              class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ icon("plus", "size-5") }} Add a job</button>
+    </fieldset>
+    {{ field("total", "Total cost ($)", form.total, e.total, attrs='inputmode="decimal" autocomplete="off"') }}
+    {{ textarea("notes", "Notes", form.notes, e.notes) }}
+  </section>
+
+  <section class="space-y-3">
+    <h2 class="font-semibold">Declined jobs (kept on the To do list)</h2>
+    <div id="declined" class="space-y-3">
+      {% for row in rows %}{% include "partials/declined_row.html" %}{% endfor %}
+    </div>
+    <template id="declined-template">{% set row = None %}{% include "partials/declined_row.html" %}</template>
+    <button type="button" data-add-row="declined" data-template="declined-template"
+            class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ icon("plus", "size-5") }} Add recommended work</button>
+  </section>
+
+  <div class="flex flex-wrap gap-2">
+    {{ primary_button("Save") }}
+    {{ secondary_link("Cancel", "/documents") }}
+  </div>
+</form>
+{% endif %}
+{% endblock %}
