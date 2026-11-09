@@ -16,7 +16,7 @@ The app is organised around **one selected car**, chosen from the selector at th
 | Due | `/due` | Due items soonest first (overdue and due-soon highlighted), mark done, add or edit; completed items in a collapsed list |
 | To do | `/todo` | Recommended work (from declined invoice jobs or added by hand) with the quoted total; mark done (optionally linking the service record) or dismiss |
 | All cars | `/cars` | A card per visible car with photo, current mileage and its due-soon items; star cars and choose the sort |
-| Add / edit a car | `/cars/new`, `/cars/{id}/edit` | Year, make, model, trim, engine, color, plate, title number, VIN with **Look up**, loan, notes, Shared / Only me |
+| Add / edit a car | `/cars/new`, `/cars/{id}/edit` | Year, make, model, trim, engine, color, plate, title number, VIN (17 characters, or 5 to 16 for pre-1981 cars) with **Look up** (17-character VINs only), loan, notes, Shared / Only me |
 | Invoice review | `/invoices/{id}/review` | Check, edit, remove or add lines of an uploaded invoice before anything is saved |
 | More | `/more` | Documents, Mileage history, Your data, appearance, people (admin) |
 | Mileage history | `/mileage` | Readings newest first; edit or delete |

@@ -48,7 +48,10 @@
 
 - 005 (title, DIY, brand): the existing `service_items.part` column now holds the brand (label changed, no rename) and `part_number` is new. `done_by` defaults to shop (server default) so old records are Shop. Editing a DIY record keeps its original person; switching a record to Shop clears it; invoice imports force Shop. The data download names the item field `brand` (was `part`) and adds `part_number`, `done_by`, `title_number`.
 
+- 006 (classic VINs, keyboard): a VIN is valid if it's a modern 17-character one (no I, O, Q) or 5 to 16 letters and digits (spaces and dashes stripped). Invalid input shows the new error; a valid short VIN shows the pre-1981 hint instead and disables Look up (live in `app.js`, and server-side). The hint is shown only for valid short VINs; an invalid one keeps the error. The VIN input's `maxlength` is 21 so pasted dashes/spaces survive until normalised. The tab bar is hidden by `body.keyboard-open [data-tabbar]` (set on focusin, cleared 150 ms after focusout if no field is focused); `visualViewport` wasn't needed. Main bottom padding went from 5rem to 6rem plus the safe area.
+
 ## Needs a human
+- Check on an iPhone (installed app and Safari): open Add a car, tap into fields and scroll; the tab bar should stay hidden while typing and return after tapping outside the fields; Save should be reachable. Also add a car with an 11-character VIN. Not testable here.
 - Connect a Vercel Blob store with private access to the project (adds BLOB_STORE_ID; OIDC is used, no token to copy) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so after connecting, run More > Check file storage as admin. If it fails, its status and error code say why.
 - Try the invoice import with one real invoice. The parser was only tested on an invented fixture in the documented layout; if the real PDF's text comes out differently the upload still works (the file is kept and an empty record opens), but the parser in app/invoice.py may need adjusting.
 
@@ -58,3 +61,4 @@
 - 003-blob-oidc: the Blob backend authenticates with OIDC (store ID + request OIDC token), Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
 - 004-overview-buttons: star and Edit buttons moved onto the photo row; the car name uses the full width and wraps (FR-4)
 - 005-title-diy-parts: car title number, Done by Shop / Myself with a DIY tag, and separate brand and part number on service items (FR-1, FR-12, FR-13)
+- 006-classic-vins-and-keyboard: accept pre-1981 VINs (form, Look up, invoice matching) and hide the phone tab bar while typing (FR-1, FR-2, FR-20, NFR-19)
