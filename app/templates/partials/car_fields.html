@@ -1,0 +1,31 @@
+{% from "partials/forms.html" import field %}
+{% set e = form.errors %}
+{#- The car's facts. The VIN look-up swaps this block (FR-2). -#}
+<div id="car-fields" class="space-y-4">
+  <div>
+    <label for="f-vin" class="mb-1 block text-sm font-medium">VIN</label>
+    <div class="flex gap-2">
+      <input id="f-vin" name="vin" type="text" value="{{ form.vin }}" autocapitalize="characters" autocomplete="off" maxlength="17"
+             {% if e.vin %}aria-invalid="true"{% endif %}
+             class="min-h-[44px] min-w-0 flex-1 rounded-lg border bg-white px-3 text-base dark:bg-slate-900 {{ 'border-red-500' if e.vin else 'border-slate-300 dark:border-slate-700' }}">
+      <button type="button" hx-post="/cars/vin-lookup" hx-include="#car-fields" hx-target="#car-fields" hx-swap="outerHTML"
+              class="min-h-[44px] shrink-0 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">Look up</button>
+    </div>
+    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Optional. Look up fills year, make, model, trim and engine from the free NHTSA service; you can still edit them.</p>
+    {% if e.vin %}<p class="mt-1 text-sm text-red-600 dark:text-red-400">{{ e.vin }}</p>{% endif %}
+    {% if lookup_message %}<p role="status" class="mt-2 rounded-lg px-3 py-2 text-sm {{ 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' if lookup_ok else 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200' }}">{{ lookup_message }}</p>{% endif %}
+  </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+    {{ field("year", "Year", form.year, e.year, type="text", required=True, attrs='inputmode="numeric" maxlength="4" autocomplete="off"') }}
+    {{ field("make", "Make", form.make, e.make, required=True, attrs='autocomplete="off"') }}
+    {{ field("model", "Model", form.model, e.model, required=True, attrs='autocomplete="off"') }}
+  </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {{ field("trim", "Trim", form.trim, e.trim) }}
+    {{ field("engine", "Engine", form.engine, e.engine) }}
+    {{ field("nickname", "Nickname", form.nickname, e.nickname, hint="Shown instead of year, make and model.") }}
+    {{ field("color", "Color", form.color, e.color, attrs='list="colors" autocomplete="off"') }}
+    <datalist id="colors">{% for c in ["Black", "White", "Silver", "Gray", "Blue", "Red", "Green", "Brown", "Beige", "Gold", "Orange", "Yellow"] %}<option value="{{ c }}">{% endfor %}</datalist>
+    {{ field("plate", "Plate", form.plate, e.plate, attrs='autocapitalize="characters" autocomplete="off"') }}
+  </div>
+</div>

@@ -8,11 +8,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
-from app import audit, cars, storage
+from app import audit, cars, nhtsa, storage
 from app.crypto import blind_index
 from app.models import Car, User, utcnow
 from app.sessions import DbSession, SignedInUser, same_origin
-from app.web import render
+from app.web import render, render_partial
 
 router = APIRouter()
 
@@ -252,4 +252,40 @@ def photo(db: DbSession, user: SignedInUser, car_id: uuid.UUID) -> Response:
         raise HTTPException(status_code=404, detail="No photo") from exc
     return Response(
         data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=3600"}
+    )
+
+
+@router.post("/cars/vin-lookup", response_class=HTMLResponse, dependencies=[Depends(same_origin)])
+def vin_lookup(
+    request: Request,
+    user: SignedInUser,
+    vin: Annotated[str, Form(max_length=60)] = "",
+    year: Annotated[str, Form(max_length=10)] = "",
+    make: Annotated[str, Form(max_length=200)] = "",
+    model: Annotated[str, Form(max_length=200)] = "",
+    nickname: Annotated[str, Form(max_length=200)] = "",
+    trim: Annotated[str, Form(max_length=200)] = "",
+    engine: Annotated[str, Form(max_length=200)] = "",
+    color: Annotated[str, Form(max_length=100)] = "",
+    plate: Annotated[str, Form(max_length=100)] = "",
+) -> HTMLResponse:
+    """Fill the car form's fields from the VIN. Whatever it can't fill stays as typed."""
+    form = CarForm(year, make, model, nickname, re.sub(r"\s+", "", vin).upper(), trim, engine)
+    form.color, form.plate = color, plate
+    message, ok = "", False
+    if not VIN_RE.match(form.vin):
+        message = "Enter the 17-character VIN first (no I, O or Q)."
+    else:
+        try:
+            decoded = nhtsa.decode_vin(form.vin)
+        except nhtsa.NhtsaError as exc:
+            message = f"{exc} Type the details in instead."
+        else:
+            for name in ("year", "make", "model", "trim", "engine"):
+                value = getattr(decoded, name)
+                if value:
+                    setattr(form, name, value)
+            message, ok = "Filled in from the VIN. Check the details and correct anything.", True
+    return render_partial(
+        request, "partials/car_fields.html", form=form, lookup_message=message, lookup_ok=ok
     )

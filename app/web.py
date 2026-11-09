@@ -87,3 +87,8 @@ def render(
         status_code=status_code,
         headers=NO_STORE,
     )
+
+
+def render_partial(request: Request, template: str, **context: Any) -> HTMLResponse:
+    """An HTML fragment for htmx to swap in."""
+    return templates.TemplateResponse(request, template, context, headers=NO_STORE)
