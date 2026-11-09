@@ -39,6 +39,17 @@
     });
   });
 
+  // Date inputs marked data-today start on the viewer's own current date.
+  function fillToday() {
+    document.querySelectorAll("input[type=date][data-today]").forEach(function (el) {
+      if (el.value) return;
+      var d = new Date();
+      el.value = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    });
+  }
+  document.addEventListener("DOMContentLoaded", fillToday);
+  document.addEventListener("htmx:afterSettle", fillToday);
+
   // Show times in the viewer's own time zone; the server only knows UTC.
   // Markup: <time datetime="2026-11-05T14:00:00+00:00" data-local="date|datetime">Nov 5, 2026</time>
   function localTimes() {

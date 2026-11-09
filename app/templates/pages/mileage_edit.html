@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, primary_button, secondary_link %}
+{% block content %}
+<form method="post" action="/mileage/{{ reading.id }}/edit" hx-boost="false" class="max-w-md space-y-4">
+  {{ field("on", "Date", values.on, errors.on, type="date", required=True) }}
+  {{ field("miles", "Miles", values.miles, errors.miles, required=True, attrs='inputmode="numeric" autocomplete="off"') }}
+  <div class="flex gap-2">{{ primary_button("Save") }}{{ secondary_link("Cancel", "/mileage") }}</div>
+</form>
+{% endblock %}

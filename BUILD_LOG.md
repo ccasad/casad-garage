@@ -4,9 +4,9 @@
 - Cars: add, edit, delete; car selector with remembered car; Overview tab; All cars view (FR-1, FR-3 to FR-6) — Add, edit and delete cars; car selector; Overview and All cars (FR-1, FR-3 to FR-6)
 - Color and car photo (FR-1, FR-7) — Color and car photo (FR-1, FR-7)
 - VIN lookup through NHTSA (FR-2) — VIN lookup through NHTSA (FR-2)
+- Mileage readings (FR-10, FR-11) — Mileage readings (FR-10, FR-11 for the readings themselves; the automatic reading from service records arrives with service records)
 
 ## Next
-- Mileage readings (FR-10, FR-11)
 - Service records, typed in (FR-12 to FR-14)
 - Due dates and "Due soon" (FR-15 to FR-17)
 - Private cars ("Only me") (FR-8)

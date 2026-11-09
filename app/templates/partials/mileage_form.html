@@ -1,0 +1,8 @@
+{% from "partials/forms.html" import field, primary_button %}
+{#- Add a mileage reading. Needs `car`; optional `errors`, `values`, `next_path`. -#}
+<form method="post" action="/cars/{{ car.id }}/mileage" hx-boost="false" class="flex flex-wrap items-start gap-3">
+  <input type="hidden" name="next" value="{{ next_path | default('/mileage') }}">
+  <div class="w-40">{{ field("on", "Date", (values or {}).get("on", ""), (errors or {}).get("on"), type="date", required=True, attrs='data-today', id="mileage-on") }}</div>
+  <div class="w-40">{{ field("miles", "Miles", (values or {}).get("miles", ""), (errors or {}).get("miles"), required=True, attrs='inputmode="numeric" autocomplete="off"', id="mileage-miles") }}</div>
+  <div class="pt-6">{{ primary_button("Add reading") }}</div>
+</form>

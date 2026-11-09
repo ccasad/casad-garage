@@ -1,11 +1,12 @@
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, ClassVar
 
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -237,3 +238,15 @@ class UserPrefs(Base):
     selected_car_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("cars.id", ondelete="SET NULL")
     )
+
+
+class MileageReading(Base):
+    """A dated odometer reading. The newest by date is the car's current mileage."""
+
+    __tablename__ = "mileage_readings"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    car_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cars.id", ondelete="CASCADE"), index=True)
+    on: Mapped[date] = mapped_column(Date)
+    miles: Mapped[int]
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)

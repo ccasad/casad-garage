@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
-from app.routes import account, admin, auth, cars, pages, tabs
+from app.routes import account, admin, auth, cars, mileage, pages, tabs
 from app.sessions import LoginRequired
 from app.web import STATIC_DIR
 
@@ -22,6 +22,7 @@ async def login_required(request: Request, exc: LoginRequired) -> Response:
 
 app.include_router(pages.router)
 app.include_router(cars.router)
+app.include_router(mileage.router)
 app.include_router(tabs.router)
 app.include_router(auth.router)
 app.include_router(admin.router)

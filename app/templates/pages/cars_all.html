@@ -13,6 +13,8 @@
         {{ car_photo(c, "mb-3 h-32 w-full") }}
         <span class="block truncate font-semibold">{{ c.name }}</span>
         <span class="block truncate text-sm text-slate-500 dark:text-slate-400">{{ c.subtitle }}{% if c.color %} · {{ c.color }}{% endif %}</span>
+        {% set m = cards.mileage.get(c.id) %}
+        <span class="mt-1 block text-sm">{% if m %}{{ "{:,}".format(m.miles) }} mi{% else %}No mileage yet{% endif %}</span>
       </button>
     </form>
   </li>
