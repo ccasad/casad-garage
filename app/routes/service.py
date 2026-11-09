@@ -264,6 +264,6 @@ UPLOAD_NOTICES = {
     "type": "That file isn't a PDF.",
     "size": "That PDF is larger than 10 MB.",
     "storage": "The file could not be saved. Try again.",
-    "storage-setup": "File storage isn't set up (BLOB_READ_WRITE_TOKEN).",
+    "storage-setup": "File storage isn't connected. Ask the admin to run Check file storage.",
     "no-car": "Pick a car (top right) before uploading an invoice.",
 }

@@ -7,9 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from app.config import get_settings
 from app.routes import account, admin, auth, cars, due, invoices, mileage, pages, service, todo
 from app.sessions import LoginRequired
+from app.storage import OidcMiddleware
 from app.web import STATIC_DIR
 
 app = FastAPI(title=get_settings().app_name, docs_url=None, redoc_url=None, openapi_url=None)
+app.add_middleware(OidcMiddleware)
 
 
 @app.exception_handler(LoginRequired)

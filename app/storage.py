@@ -2,8 +2,11 @@
 
 Files are private: they live in Vercel Blob (private access) under random paths, the
 database keeps only the reference, and downloads go through the app's access check.
-Without BLOB_READ_WRITE_TOKEN, files go to a local folder so development works."""
+On Vercel the app authenticates with OIDC: BLOB_STORE_ID plus the OIDC token of the current
+request. BLOB_READ_WRITE_TOKEN is the fallback. Off Vercel with neither, files go to a local
+folder so development works; on Vercel the local folder is never used."""
 
+import contextvars
 import logging
 import secrets
 from pathlib import Path
@@ -15,6 +18,41 @@ from app.config import get_settings
 
 BLOB_API = "https://vercel.com/api/blob"
 BLOB_API_VERSION = "13"
+OIDC_HEADER = "x-vercel-oidc-token"
+
+# The OIDC token of the request being handled; set by OidcMiddleware.
+request_oidc_token: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "request_oidc_token", default=None
+)
+
+
+class OidcMiddleware:
+    """Pure ASGI middleware: remembers the request's x-vercel-oidc-token for the storage code
+    (Vercel Python functions receive it as a header, not as an environment variable)."""
+
+    def __init__(self, app) -> None:
+        self.app = app
+
+    async def __call__(self, scope, receive, send) -> None:
+        if scope["type"] == "http":
+            wanted = OIDC_HEADER.encode()
+            token = next(
+                (value.decode("latin-1") for name, value in scope["headers"] if name == wanted),
+                None,
+            )
+            reset = request_oidc_token.set(token or None)
+            try:
+                await self.app(scope, receive, send)
+            finally:
+                request_oidc_token.reset(reset)
+        else:
+            await self.app(scope, receive, send)
+
+
+def oidc_token() -> str | None:
+    """The current request's OIDC token, else VERCEL_OIDC_TOKEN (e.g. after `vercel env pull`)."""
+    return request_oidc_token.get() or get_settings().vercel_oidc_token or None
+
 
 log = logging.getLogger(__name__)
 
@@ -63,11 +101,20 @@ class BlobBackend:
     GET of the blob URL, each with the bearer token."""
 
     name = "Vercel Blob"
+    method = "read-write token"
 
-    def __init__(self, token: str, api_url: str | None = None) -> None:
+    def __init__(self, token: str, api_url: str | None = None, store_id: str | None = None) -> None:
         self.api = (api_url or BLOB_API).rstrip("/")
         self.auth = {"authorization": f"Bearer {token}"}
+        if store_id:
+            # OIDC: the bearer is the OIDC token, so say which store it is for.
+            self.auth["x-vercel-blob-store-id"] = store_id
+            self.method = "OIDC"
         self.headers = {**self.auth, "x-api-version": BLOB_API_VERSION}
+
+    @property
+    def label(self) -> str:
+        return f"{self.name} via {self.method}"
 
     def fail(
         self, operation: str, message: str, response: httpx2.Response | None, exc: Exception
@@ -123,6 +170,7 @@ class LocalBackend:
     """Development stand-in: files in a folder, referenced by their relative path."""
 
     name = "Local folder"
+    label = "Local folder"
 
     def __init__(self, root: str) -> None:
         self.root = Path(root)
@@ -140,7 +188,7 @@ class LocalBackend:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         except OSError as exc:
-            raise StorageError("File storage isn't set up (BLOB_READ_WRITE_TOKEN).") from exc
+            raise StorageError("The file could not be saved.") from exc
         return ref
 
     def get(self, ref: str) -> bytes:
@@ -153,11 +201,48 @@ class LocalBackend:
         self.path(ref).unlink(missing_ok=True)
 
 
+NOT_CONNECTED = "File storage isn't connected: no BLOB_STORE_ID / OIDC token"
+
+
+class UnconnectedBackend:
+    """On Vercel with no usable Blob credentials: fail clearly rather than use the local folder."""
+
+    name = "Vercel Blob"
+    label = "Vercel Blob (not connected)"
+
+    def put(self, pathname: str, data: bytes, content_type: str) -> str:
+        raise StorageError(NOT_CONNECTED)
+
+    def get(self, ref: str) -> bytes:
+        raise StorageError(NOT_CONNECTED)
+
+    def delete(self, ref: str) -> None:
+        raise StorageError(NOT_CONNECTED)
+
+
 def backend() -> Backend:
+    """OIDC (store ID + the request's OIDC token), then the read-write token, then the local
+    folder, which is only allowed when not running on Vercel."""
     settings = get_settings()
+    token = oidc_token()
+    if settings.blob_store_id and token:
+        return BlobBackend(token, settings.vercel_blob_api_url, settings.blob_store_id)
     if settings.blob_read_write_token:
         return BlobBackend(settings.blob_read_write_token, settings.vercel_blob_api_url)
+    if settings.vercel:
+        return UnconnectedBackend()
     return LocalBackend(settings.local_storage_dir)
+
+
+def describe() -> dict:
+    """What the Check page shows: the backend and method, and whether the OIDC inputs exist.
+    Presence only, never values."""
+    settings = get_settings()
+    return {
+        "label": backend().label,
+        "store_id_found": bool(settings.blob_store_id),
+        "oidc_token_found": bool(oidc_token()),
+    }
 
 
 def new_pathname(kind: str, extension: str) -> str:
@@ -184,7 +269,7 @@ def remove(ref: str | None) -> None:
 
 
 def check() -> tuple[str, bool, str]:
-    """Save, read back, compare and delete a tiny test file. Returns (backend name, ok, message)
+    """Save, read back, compare and delete a tiny test file. Returns (backend label, ok, message)
     where the message is "File storage works" or the failing step with status and error code."""
     store = backend()
     data = secrets.token_bytes(16)
@@ -199,7 +284,7 @@ def check() -> tuple[str, bool, str]:
             )
             if part
         )
-        return store.name, False, f"{step} failed" + (f" ({detail})" if detail else f": {exc}")
+        return store.label, False, f"{step} failed" + (f" ({detail})" if detail else f": {exc}")
 
     try:
         ref = store.put(new_pathname("checks", "txt"), data, "text/plain")
@@ -207,7 +292,7 @@ def check() -> tuple[str, bool, str]:
         return failure("Saving the test file", exc)
     try:
         if store.get(ref) != data:
-            return store.name, False, "Reading back the test file failed (contents differ)"
+            return store.label, False, "Reading back the test file failed (contents differ)"
     except StorageError as exc:
         remove(ref)
         return failure("Reading back the test file", exc)
@@ -215,4 +300,4 @@ def check() -> tuple[str, bool, str]:
         store.delete(ref)
     except StorageError as exc:
         return failure("Deleting the test file", exc)
-    return store.name, True, "File storage works"
+    return store.label, True, "File storage works"

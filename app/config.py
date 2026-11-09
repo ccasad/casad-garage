@@ -22,8 +22,14 @@ class Settings(BaseSettings):
 
     admin_email: str | None = None
 
-    # Vercel Blob (photos, invoices). Without a token, files go to a local folder (development).
+    # Vercel Blob (photos, invoices). On Vercel the app uses the store ID with the project's OIDC
+    # token; BLOB_READ_WRITE_TOKEN is optional (local use, or a store connected the older way).
+    # Without either, files go to a local folder, but never on Vercel.
+    blob_store_id: str | None = None
     blob_read_write_token: str | None = None
+    vercel_oidc_token: str | None = None
+    # Set to "1" by Vercel.
+    vercel: str | None = None
     # Override the Blob API base (the SDK reads VERCEL_BLOB_API_URL too).
     vercel_blob_api_url: str | None = None
     local_storage_dir: str = ".local-storage"

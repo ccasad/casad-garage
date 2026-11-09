@@ -116,6 +116,7 @@ class MemoryBackend:
     """Files in a dict, standing in for Vercel Blob."""
 
     name = "Memory"
+    label = "Memory"
 
     def __init__(self):
         self.files: dict[str, bytes] = {}

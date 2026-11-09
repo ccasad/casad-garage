@@ -4,6 +4,8 @@
   <h2 class="font-semibold">File storage</h2>
   <p class="text-sm text-slate-500 dark:text-slate-400">
     Storage in use: <span class="font-medium text-slate-900 dark:text-slate-100">{{ backend_name }}</span>.
+    BLOB_STORE_ID: <span class="font-medium text-slate-900 dark:text-slate-100">{{ "found" if store_id_found else "not found" }}</span>.
+    OIDC token: <span class="font-medium text-slate-900 dark:text-slate-100">{{ "found" if oidc_token_found else "not found" }}</span>.
     The check saves a tiny test file, reads it back, compares it and deletes it.
   </p>
   {% if result %}

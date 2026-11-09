@@ -5,6 +5,7 @@ import pytest
 from sqlalchemy import select
 
 from app import storage
+from app.config import Settings
 from app.models import AuditEvent
 from tests.conftest import make_car, sign_in
 
@@ -211,3 +212,148 @@ def test_check_is_admin_only(client, db, member):
     assert client.get("/admin/storage").status_code == 403
     assert client.post("/admin/storage/check").status_code == 403
     assert "/admin/storage" not in client.get("/more").text
+
+
+# --- OIDC (FR-7, FR-18, FR-29, NFR-14) ---
+
+REAL_BACKEND = storage.backend
+STORE = "store_abc123"
+OIDC = "oidc-token-xyz"
+
+
+@pytest.fixture
+def env(monkeypatch):
+    """Real backend selection with explicit settings; returns a function to set them."""
+    monkeypatch.setattr(storage, "backend", REAL_BACKEND)
+
+    def set_env(**values):
+        settings = Settings(_env_file=None, local_storage_dir="/tmp/x-local", **values)
+        monkeypatch.setattr(storage, "get_settings", lambda: settings)
+
+    return set_env
+
+
+def test_oidc_when_store_id_and_token(env):
+    env(blob_store_id=STORE, vercel_oidc_token=OIDC, vercel="1")
+    chosen = storage.backend()
+    assert isinstance(chosen, storage.BlobBackend)
+    assert chosen.label == "Vercel Blob via OIDC"
+    assert chosen.auth["authorization"] == f"Bearer {OIDC}"
+    assert chosen.auth["x-vercel-blob-store-id"] == STORE
+
+
+def test_oidc_wins_over_the_read_write_token(env):
+    env(blob_store_id=STORE, vercel_oidc_token=OIDC, blob_read_write_token=TOKEN, vercel="1")
+    assert storage.backend().label == "Vercel Blob via OIDC"
+
+
+def test_read_write_token_when_no_oidc(env):
+    env(blob_store_id=STORE, blob_read_write_token=TOKEN, vercel="1")
+    chosen = storage.backend()
+    assert chosen.label == "Vercel Blob via read-write token"
+    assert chosen.auth == {"authorization": f"Bearer {TOKEN}"}
+
+
+def test_store_id_without_a_token_is_not_oidc(env):
+    env(blob_store_id=STORE)
+    assert isinstance(storage.backend(), storage.LocalBackend)
+
+
+def test_local_folder_when_nothing_is_set_off_vercel(env):
+    env()
+    assert storage.backend().label == "Local folder"
+
+
+@pytest.mark.parametrize(
+    "values",
+    [{}, {"blob_store_id": STORE}, {"vercel_oidc_token": OIDC}],
+)
+def test_local_folder_is_never_used_on_vercel(env, values):
+    env(vercel="1", **values)
+    chosen = storage.backend()
+    assert isinstance(chosen, storage.UnconnectedBackend)
+    with pytest.raises(storage.StorageError, match="no BLOB_STORE_ID / OIDC token"):
+        chosen.put("a.jpg", b"x", "image/jpeg")
+    with pytest.raises(storage.StorageError, match="isn't connected"):
+        chosen.get("a")
+
+
+def test_oidc_token_comes_from_the_current_request(env):
+    env(blob_store_id=STORE, vercel="1")
+    seen = []
+
+    async def app(scope, receive, send):
+        seen.append(storage.oidc_token())
+
+    import asyncio
+
+    middleware = storage.OidcMiddleware(app)
+    scope = {"type": "http", "headers": [(b"x-vercel-oidc-token", b"req-token-1")]}
+    asyncio.run(middleware(scope, None, None))
+    asyncio.run(middleware({"type": "http", "headers": []}, None, None))
+    assert seen == ["req-token-1", None]
+    assert storage.oidc_token() is None
+
+
+def test_request_token_beats_the_environment_token(env):
+    env(blob_store_id=STORE, vercel_oidc_token="env-token", vercel="1")
+    token = storage.request_oidc_token.set("req-token")
+    try:
+        assert storage.backend().auth["authorization"] == "Bearer req-token"
+    finally:
+        storage.request_oidc_token.reset(token)
+    assert storage.backend().auth["authorization"] == "Bearer env-token"
+
+
+def test_header_reaches_storage_through_the_app(client, db, admin, env, monkeypatch):
+    env(blob_store_id=STORE, vercel="1")
+    sign_in(client, db, admin)
+    monkeypatch.setattr(storage, "backend", REAL_BACKEND)
+    page = client.get("/admin/storage", headers={"x-vercel-oidc-token": OIDC})
+    assert "OIDC token: <span" in page.text and "found</span>" in page.text
+    assert OIDC not in page.text and STORE not in page.text
+    assert "Vercel Blob via OIDC" in page.text
+    page = client.get("/admin/storage")
+    assert "Vercel Blob (not connected)" in page.text
+
+
+def test_oidc_put_get_delete_send_the_expected_auth(env, monkeypatch):
+    env(blob_store_id=STORE, vercel_oidc_token=OIDC, vercel="1")
+    requests = []
+
+    def handler(request):
+        requests.append(request)
+        return (
+            httpx2.Response(200, json={"url": "https://s.private/x"}, content=None)
+            if (request.method == "PUT")
+            else httpx2.Response(200, content=b"bytes")
+        )
+
+    monkeypatch.setattr(
+        storage, "http_client", lambda: httpx2.Client(transport=httpx2.MockTransport(handler))
+    )
+    backend = storage.backend()
+    backend.put("photos/a.jpg", b"d", "image/jpeg")
+    backend.get("https://s.private/x")
+    backend.delete("https://s.private/x")
+    assert len(requests) == 3
+    for request in requests:
+        assert request.headers["authorization"] == f"Bearer {OIDC}"
+        assert request.headers["x-vercel-blob-store-id"] == STORE
+
+
+def test_oidc_failure_log_has_no_token_or_store(env, monkeypatch, caplog):
+    env(blob_store_id=STORE, vercel_oidc_token=OIDC, vercel="1")
+    monkeypatch.setattr(
+        storage,
+        "http_client",
+        lambda: httpx2.Client(
+            transport=httpx2.MockTransport(
+                lambda r: httpx2.Response(403, json={"error": {"code": "forbidden"}})
+            )
+        ),
+    )
+    with caplog.at_level(logging.WARNING), pytest.raises(storage.StorageError):
+        storage.backend().put("photos/a.jpg", b"d", "image/jpeg")
+    assert "status=403 code=forbidden" in caplog.text
+    assert OIDC not in caplog.text and STORE not in caplog.text

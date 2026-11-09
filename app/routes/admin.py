@@ -96,7 +96,8 @@ def remove_user(user_id: uuid.UUID, db: DbSession, admin: AdminUser) -> Redirect
 def storage_page(
     request: Request, admin: User, db: Session, result: tuple[str, bool, str] | None = None
 ) -> HTMLResponse:
-    backend_name = result[0] if result else storage.backend().name
+    info = storage.describe()
+    backend_name = result[0] if result else info["label"]
     return render(
         request,
         "pages/admin_storage.html",
@@ -105,6 +106,8 @@ def storage_page(
         active="more",
         db=db,
         backend_name=backend_name,
+        store_id_found=info["store_id_found"],
+        oidc_token_found=info["oidc_token_found"],
         result=result,
     )
 
