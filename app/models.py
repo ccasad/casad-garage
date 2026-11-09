@@ -249,4 +249,47 @@ class MileageReading(Base):
     car_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cars.id", ondelete="CASCADE"), index=True)
     on: Mapped[date] = mapped_column(Date)
     miles: Mapped[int]
+    # Set when the reading came from saving a service record (FR-11).
+    service_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("service_records.id", ondelete="CASCADE"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+
+class ServiceRecord(Base):
+    """One visit: a date, odometer, shop and the work done."""
+
+    __tablename__ = "service_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    car_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cars.id", ondelete="CASCADE"), index=True)
+    on: Mapped[date] = mapped_column(Date)
+    miles: Mapped[int | None]
+    shop: Mapped[str | None] = mapped_column(String(120))
+    ro_number: Mapped[str | None] = mapped_column(String(40))
+    total_cents: Mapped[int | None]
+    notes: Mapped[str | None] = mapped_column(EncryptedText)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    items: Mapped[list["ServiceItem"]] = relationship(
+        back_populates="record",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="ServiceItem.position",
+    )
+
+
+class ServiceItem(Base):
+    __tablename__ = "service_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    record_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("service_records.id", ondelete="CASCADE"), index=True
+    )
+    position: Mapped[int] = mapped_column(default=0)
+    description: Mapped[str] = mapped_column(String(200))
+    type: Mapped[str] = mapped_column(String(30), default="other")
+    part: Mapped[str | None] = mapped_column(String(120))
+    cost_cents: Mapped[int | None]
+
+    record: Mapped[ServiceRecord] = relationship(back_populates="items")

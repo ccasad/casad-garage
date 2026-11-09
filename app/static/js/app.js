@@ -50,6 +50,22 @@
   document.addEventListener("DOMContentLoaded", fillToday);
   document.addEventListener("htmx:afterSettle", fillToday);
 
+  // Repeating rows in a form: <button data-add-row="container-id" data-template="template-id">
+  // appends a copy of the template; <button data-remove-row> inside a row removes it.
+  document.addEventListener("click", function (event) {
+    var add = event.target.closest && event.target.closest("[data-add-row]");
+    if (add) {
+      var template = document.getElementById(add.dataset.template);
+      document.getElementById(add.dataset.addRow).appendChild(template.content.cloneNode(true));
+      return;
+    }
+    var remove = event.target.closest && event.target.closest("[data-remove-row]");
+    if (remove) {
+      var row = remove.closest("[data-item-row]");
+      if (row) row.remove();
+    }
+  });
+
   // Show times in the viewer's own time zone; the server only knows UTC.
   // Markup: <time datetime="2026-11-05T14:00:00+00:00" data-local="date|datetime">Nov 5, 2026</time>
   function localTimes() {

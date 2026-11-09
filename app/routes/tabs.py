@@ -17,13 +17,6 @@ def tab_page(
     return render(request, template, title=title, user=user, active=key, db=db, car=car)
 
 
-@router.get("/service", response_class=HTMLResponse)
-def service(request: Request, db: DbSession, user: SignedInUser) -> HTMLResponse:
-    return tab_page(
-        request, db, user, key="service", title="Service", template="pages/service.html"
-    )
-
-
 @router.get("/due", response_class=HTMLResponse)
 def due(request: Request, db: DbSession, user: SignedInUser) -> HTMLResponse:
     return tab_page(request, db, user, key="due", title="Due", template="pages/due.html")

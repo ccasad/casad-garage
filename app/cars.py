@@ -10,8 +10,9 @@ from fastapi import HTTPException
 from sqlalchemy import Select, or_, select
 from sqlalchemy.orm import Session
 
-from app import mileage, storage
+from app import mileage, service, storage
 from app.models import Car, User, UserPrefs
+from app.service_types import SERVICE_TYPE_LABELS
 
 TAB_PATHS = ("/", "/service", "/due", "/todo", "/mileage", "/documents")
 
@@ -74,7 +75,12 @@ def delete_car_files(db: Session, car: Car) -> None:
 
 
 def overview_context(db: Session, car: Car) -> dict:
-    return {"current": mileage.current_mileage(db, [car.id]).get(car.id)}
+    records = service.records_for_car(db, car.id)
+    return {
+        "current": mileage.current_mileage(db, [car.id]).get(car.id),
+        "last_done": service.last_done(records),
+        "type_labels": SERVICE_TYPE_LABELS,
+    }
 
 
 def card_context(db: Session, cars_: Sequence[Car]) -> dict:

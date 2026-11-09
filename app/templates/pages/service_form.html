@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% from "partials/forms.html" import field, textarea, primary_button, secondary_link %}
+{% from "partials/icons.html" import icon %}
+{% block content %}
+{% set e = form.errors %}
+<form method="post" action="{{ '/service/' ~ record.id ~ '/edit' if record else '/cars/' ~ car.id ~ '/service' }}" hx-boost="false" class="max-w-2xl space-y-4">
+  <p class="text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+  {% if e %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted parts and save again.</p>{% endif %}
+  <div class="grid grid-cols-2 gap-4">
+    {{ field("on", "Date", form.on, e.on, type="date", required=True, attrs="data-today") }}
+    {{ field("miles", "Mileage", form.miles, e.miles, attrs='inputmode="numeric" autocomplete="off"', hint="Also added to the mileage history.") }}
+  </div>
+  <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    {{ field("shop", "Shop", form.shop, e.shop, attrs='autocomplete="off"') }}
+    {{ field("ro_number", "Repair order number", form.ro_number, e.ro_number, attrs='autocomplete="off"') }}
+  </div>
+
+  <fieldset class="space-y-3">
+    <legend class="mb-1 text-sm font-semibold">Items</legend>
+    {% if e.rows %}<p class="text-sm text-red-600 dark:text-red-400">{{ e.rows }}</p>{% endif %}
+    <div id="items" class="space-y-3">
+      {% for item in form.items %}{% include "partials/service_item_row.html" %}{% endfor %}
+    </div>
+    <template id="item-template">{% set item = None %}{% include "partials/service_item_row.html" %}</template>
+    <button type="button" data-add-row="items" data-template="item-template"
+            class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ icon("plus", "size-5") }} Add another item</button>
+  </fieldset>
+
+  {{ field("total", "Total cost ($)", form.total, e.total, attrs='inputmode="decimal" autocomplete="off"', hint="Leave blank to add up the item costs.") }}
+  {{ textarea("notes", "Notes", form.notes, e.notes) }}
+  <div class="flex flex-wrap gap-2">
+    {{ primary_button("Save service") }}
+    {{ secondary_link("Cancel", "/service/" ~ record.id if record else "/service") }}
+  </div>
+</form>
+{% endblock %}

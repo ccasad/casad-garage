@@ -1,10 +1,54 @@
 {% extends "base.html" %}
-{% from "partials/icons.html" import empty_state %}
+{% from "partials/icons.html" import icon, empty_state %}
 {% block content %}
 {% if not car %}
 {% include "partials/pick_a_car.html" %}
 {% else %}
-<p class="mb-4 text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
-{{ empty_state("Nothing here yet", "Service history for this car will show up here.", "car", "sky") }}
+<div class="max-w-3xl space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <p class="min-w-0 truncate text-sm text-slate-500 dark:text-slate-400">{{ car.name }}</p>
+    <div class="flex flex-wrap gap-2">
+      {% block service_actions %}
+      <a href="/service/new" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-semibold text-white dark:bg-sky-500 dark:text-slate-950">{{ icon("plus", "size-5") }} Log a service</a>
+      {% endblock %}
+    </div>
+  </div>
+
+  {% if total_records %}
+  <form method="get" action="/service" hx-boost="false" class="flex flex-wrap gap-2">
+    <label class="sr-only" for="q">Search</label>
+    <input id="q" name="q" type="search" value="{{ filter_q }}" placeholder="Search shop, parts, notes"
+           class="min-h-[44px] min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+    <label class="sr-only" for="type">Type</label>
+    <select id="type" name="type" onchange="this.form.submit()"
+            class="min-h-[44px] rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-slate-700 dark:bg-slate-900">
+      <option value="">All types</option>
+      {% for key, label in service_types %}<option value="{{ key }}" {% if key == filter_type %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button type="submit" class="inline-flex min-h-[44px] items-center gap-2 rounded-lg border border-slate-300 px-4 text-sm font-medium dark:border-slate-700">{{ icon("search", "size-5") }} Search</button>
+  </form>
+  {% endif %}
+
+  {% if records %}
+  <ul class="space-y-3">
+    {% for r in records %}
+    <li>
+      <a href="/service/{{ r.id }}" class="block rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div class="flex items-baseline justify-between gap-3">
+          <p class="font-semibold"><time datetime="{{ r.on.isoformat() }}">{{ r.on.strftime("%b %-d, %Y") }}</time></p>
+          {% if r.total_cents is not none %}<p class="font-medium">${{ "{:,.2f}".format(r.total_cents / 100) }}</p>{% endif %}
+        </div>
+        <p class="text-sm text-slate-500 dark:text-slate-400">{{ r.shop or "No shop" }}{% if r.miles is not none %} · {{ "{:,}".format(r.miles) }} mi{% endif %}</p>
+        <p class="mt-2 text-sm">{{ r.items | map(attribute="description") | join(", ") }}</p>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif total_records %}
+  <p class="text-sm text-slate-500 dark:text-slate-400">No records match. <a class="font-medium text-sky-700 dark:text-sky-300" href="/service">Clear the filter</a></p>
+  {% else %}
+  {{ empty_state("No service logged yet", "Log the first service for this car.", "wrench", "sky") }}
+  {% endif %}
+</div>
 {% endif %}
 {% endblock %}
