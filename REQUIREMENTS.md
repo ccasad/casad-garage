@@ -36,6 +36,9 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Check file storage button for the admin (FR-29)
 - [x] Reach the private Blob store with OIDC; Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
 - [x] Put the star and Edit buttons on the photo row so the car name uses the full width (FR-4)
+- [ ] Title number on cars (FR-1)
+- [ ] Do-it-yourself services: Done by Shop / Myself (FR-12, FR-13)
+- [ ] Brand and part number on service items (FR-12, FR-13)
 
 ## Users and access
 
@@ -57,7 +60,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 **Cars**
 
-- **FR-1** A user adds a car with year, make and model (required) and optional nickname, VIN, trim, engine, color, plate and notes. The car appears in the car selector and becomes the selected car.
+- **FR-1** A user adds a car with year, make and model (required) and optional nickname, VIN, trim, engine, color, plate, title number (up to 40 characters, stored encrypted like the plate, shown on the Overview tab after Plate and included in the data download) and notes. The car appears in the car selector and becomes the selected car.
 - **FR-2** On the add/edit form, the user enters a VIN and taps **Look up**; the app calls the NHTSA vPIC decode service and fills year, make, model, trim and engine. Every filled field stays editable. If the lookup fails or returns nothing, the app says so and the user types the details.
 - **FR-3** A car selector sits at the top right of every page. It lists the cars the user can see (in their star and sort order, FR-9), with a dot on any car that has items due soon, an "All cars" entry at the top, and "+ Add a car" at the bottom. Choosing a car makes it the selected car, and the tabs show that car. The app remembers the last selected car per user and opens on it; only when there is none (first visit, or that car was deleted or made private) does the page say "Pick a car above".
 - **FR-4** The tabs act on the selected car: Overview (photo, then one row with the photo button on the left and the star button and Edit link on the right, then the full-width car name, facts, current mileage, "last done" per service type), Service (history, with + to log a service or upload an invoice), Due (its due items), To do (its recommended work). "All cars" shows every visible car as a card (photo, name, trim, color, current mileage, and its due-soon items); tapping a card selects that car.
@@ -74,8 +77,8 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 **Service records**
 
-- **FR-12** A user adds a service record: date, mileage, shop, one or more items (description, type, part or brand, cost), total cost and notes. Types: oil change, tires, alignment, brakes, engine air filter, cabin air filter, battery, fluids, state inspection, emissions inspection, other.
-- **FR-13** The Service tab lists the car's records newest first, with a filter by type and a text search. Tapping a record shows its items and lets the user edit or delete it.
+- **FR-12** A user adds a service record: date, mileage, who did it (**Done by: Shop / Myself**, default Shop), shop and repair order number (Shop only), one or more items (description, type, optional brand up to 120 characters, optional part number up to 60 characters, cost), total cost and notes. **Myself** hides the shop and repair-order fields and records the signed-in user as the person who did it (`done_by` `shop`/`self`, `done_by_user_id` set null if that user is deleted). Imported invoices and existing records are Shop. The existing `part` column holds the brand. Types: oil change, tires, alignment, brakes, engine air filter, cabin air filter, battery, fluids, state inspection, emissions inspection, other.
+- **FR-13** The Service tab lists the car's records newest first, with a filter by type and a text search (also matching brand and part number). Records done by Myself show a small DIY tag and "by <display name>" (or "by a former member") instead of the shop; the record page shows the same. Tapping a record shows its items and lets the user edit or delete it.
 - **FR-14** The Overview tab shows the last date and mileage for each service type that has been done (e.g. "Cabin filter: Feb 2026, 52,100 mi").
 
 **Due dates**
