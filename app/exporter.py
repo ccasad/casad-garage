@@ -116,14 +116,17 @@ def garage_data(db: Session, user: User) -> dict[str, Any]:
     unmatched = db.scalars(
         select(Document).where(Document.car_id.is_(None), Document.uploaded_by_id == user.id)
     )
+    starred = cars.starred_ids(db, user)
     return {
         "cars": exported_cars,
         "unmatched_documents": [
             {"filename": d.filename, "uploaded_at": iso(d.created_at)} for d in unmatched
         ],
         "preferences": {
+            "car_sort": prefs.car_sort if prefs else "name",
+            "starred_cars": [c.name for c in visible if c.id in starred],
             "selected_car": next(
                 (c.name for c in visible if prefs and c.id == prefs.selected_car_id), None
-            )
+            ),
         },
     }

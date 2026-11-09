@@ -22,10 +22,11 @@ Use the Makefile: `make up`, `make test`, `make lint`, `make format`, `make css`
 
 Built (from app-template): passkey sign-in and invites, server-side sessions, audit log, activity (last active, sign-ins) for the admin, Your data (download and delete), Dark/Light/System theme, PWA shell, phone tabs and laptop sidebar, encrypted column types.
 
-Built for this app: see BUILD_LOG.md for what is done and what is next. Anything still unticked in REQUIREMENTS.md is not built yet.
+Built for this app (version 1, every item in the REQUIREMENTS.md to-do list): cars (add, edit, delete, selector, Overview, All cars, stars and sort, Only me), photo and VIN lookup, mileage readings, service records, due items and Due soon, invoice PDF import with review, recommended work (To do), warranties, loan payoff. BUILD_LOG.md has the decisions and the manual steps.
 
 Next, in order:
-1. Follow the feature to-do list in REQUIREMENTS.md, top to bottom (BUILD_LOG.md tracks progress).
+1. Connect a Vercel Blob store (BLOB_READ_WRITE_TOKEN) and try a photo and an invoice upload against the real store and a real invoice (the parser was only tested on an invented fixture).
+2. Anything new goes into REQUIREMENTS.md first.
 
 ## Rules
 

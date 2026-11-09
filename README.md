@@ -1,8 +1,53 @@
-# app-template
+# Casad Garage
 
-The starting point for new apps: a working, deployable app with everything that isn't specific to one idea. New apps are created from this template and add their own features on top.
+A shared garage for a household: every car in one place, with its facts, dated mileage, service history, upcoming due dates and the work a shop recommended but hasn't done yet. Car details fill in from the VIN (free NHTSA lookup), and a shop's PDF invoice can be imported instead of typed in. Invite-only; everyone sees the shared cars, and a car can be marked **Only me**.
 
-The stack, patterns and conventions are documented in the `tools-used` docs; this README covers how this code works.
+Requirements are in `REQUIREMENTS.md` (FR-x / NFR-x); `BUILD_LOG.md` records what was built and the decisions made along the way.
+
+## What it does
+
+The app is organised around **one selected car**, chosen from the selector at the top right of every page (it remembers your last choice). The selector lists your cars (starred first, then your sort order), marks cars with items due soon, and links to **All cars** and **Add a car**.
+
+| Page | Path | What's there |
+| --- | --- | --- |
+| Overview | `/` | Photo, facts, loan, current mileage (with a quick add), due-soon banners, "last done" per service type |
+| Service | `/service` | The car's service records, newest first, with a type filter and text search; log a service, upload an invoice |
+| Service record | `/service/{id}` | Items with type, part, cost and warranty; edit or delete; offers to set the next inspection / oil-change due item |
+| Due | `/due` | Due items soonest first (overdue and due-soon highlighted), mark done, add or edit; completed items in a collapsed list |
+| To do | `/todo` | Recommended work (from declined invoice jobs or added by hand) with the quoted total; mark done (optionally linking the service record) or dismiss |
+| All cars | `/cars` | A card per visible car with photo, current mileage and its due-soon items; star cars and choose the sort |
+| Add / edit a car | `/cars/new`, `/cars/{id}/edit` | Year, make, model, trim, engine, color, plate, VIN with **Look up**, loan, notes, Shared / Only me |
+| Invoice review | `/invoices/{id}/review` | Check, edit, remove or add lines of an uploaded invoice before anything is saved |
+| More | `/more` | Documents, Mileage history, Your data, appearance, people (admin) |
+| Mileage history | `/mileage` | Readings newest first; edit or delete |
+| Documents | `/documents` | Uploaded invoices for the car; opened through the app |
+
+### How the parts work
+
+- **Access** (`app/cars.py`): every query goes through `visible_filter(user)` — shared cars plus the user's own "Only me" cars. Anything attached to a car is reached by joining to the car with that filter, so another person's private data is a 404, not a 403. Only the person who added a car can change its visibility; they or the admin delete it.
+- **Mileage**: the newest reading by date is the current mileage. Saving a service record with a mileage adds a linked reading (updated or removed with the record).
+- **Due soon** (`app/due.py`): an open item is *overdue* when its date has passed or the current mileage reached its due mileage, and *due soon* within 30 days or 500 miles. Loan payoff and warranty-ends items follow the car's loan and the service item's warranty; everything else is entered by hand. Saving a service with an oil change or an inspection closes the open due item of that type.
+- **VIN lookup** (`app/nhtsa.py`): only when "Look up" is tapped; calls NHTSA vPIC `DecodeVinValues`. Pages never wait on a third party.
+- **Invoice import** (`app/invoice.py`, `app/routes/invoices.py`): the PDF is stored privately, its text extracted with `pypdf` inside the upload request, and parsed for the one supported shop layout (see REQUIREMENTS.md). Only vehicle and job information is kept (encrypted, and only until the review is saved); the customer block and payment history are skipped. The car is matched by the VIN's keyed hash; with no match you pick a car or add one pre-filled from the invoice. A duplicate (same shop and repair order number) warns first. PDFs with no text, or a layout the parser doesn't know, stay attached to the car and open an empty service record. To support another shop, add a parser beside `parse_invoice`.
+- **Files** (`app/storage.py`): photos (resized in the browser to 1600 px JPEG, `app/static/js/uploads.js`) and invoice PDFs go to Vercel Blob with private access under random paths; the database keeps only the reference. They are served only by `/cars/{id}/photo` and `/documents/{id}/file`, behind the same access check. Without `BLOB_READ_WRITE_TOKEN` (development, tests) files go to `.local-storage/`. Vercel limits a request body to 4.5 MB, so a larger invoice can't be uploaded in production even though the app's own limit is 10 MB.
+- **Encryption**: VIN, plate, notes (car, service, due, recommended work), loan and uploaded filenames use `EncryptedText` / `EncryptedJSON`. `cars.vin_hash` is `crypto.blind_index(vin)`, an HMAC under a key derived from `TOKEN_ENCRYPTION_KEY`.
+- **Audit log**: car added / deleted / visibility changed, invoice uploaded / imported (IDs only).
+
+### Tables
+
+`cars` (facts, visibility, encrypted VIN/plate/notes/loan, photo reference), `user_prefs` (selected car, sort), `car_stars`, `mileage_readings`, `service_records`, `service_items` (with warranty), `due_items` (manual, loan or warranty source), `documents` (invoice PDFs, parsed result until reviewed), `recommended_items`. All cascade from `cars`, which cascades from the user who added it. Your data (`app/exporter.py`) downloads every car the user can see with all of the above, never another person's "Only me" car; deleting an account also deletes the cars that person added and their stored files.
+
+### Environment
+
+As in the template, plus `BLOB_READ_WRITE_TOKEN` (added automatically when a Vercel Blob store is connected to the project). Create the store with private access and connect it before using photos or invoices in production.
+
+### Tests
+
+`tests/` covers each requirement. The invoice parser is tested on an invented fixture in the documented layout (`tests/invoice_fixture.py`, built with `reportlab`); no real invoice is in the repo. NHTSA and Blob are replaced by mock transports / an in-memory backend. New migrations were generated with `scripts/new_migration.py` (empty SQLite, no Postgres needed).
+
+## From the app template
+
+The rest of this README describes the template this app started from.
 
 ## What's included
 
@@ -47,7 +92,7 @@ make up                  # http://localhost:8000
 
 ## Deploying (Vercel + Neon)
 
-Vercel deploys `main`; there's no build step. Set these in Vercel (Production): `APP_BASE_URL`, `APP_NAME`, `DATABASE_URL` (Neon pooled URL), `TOKEN_ENCRYPTION_KEY`, `ADMIN_EMAIL`, `WEBAUTHN_RP_ID` (the domain, no scheme). Apply migrations to production **before** deploying code that needs them; they never run on deploy. Then create the first admin invite with `python -m app.cli invite --admin` against the production database.
+Vercel deploys `main`; there's no build step. Set these in Vercel (Production): `APP_BASE_URL`, `APP_NAME`, `BLOB_READ_WRITE_TOKEN` (from the connected Blob store), `DATABASE_URL` (Neon pooled URL), `TOKEN_ENCRYPTION_KEY`, `ADMIN_EMAIL`, `WEBAUTHN_RP_ID` (the domain, no scheme). Apply migrations to production **before** deploying code that needs them; they never run on deploy. Then create the first admin invite with `python -m app.cli invite --admin` against the production database.
 
 ## Secrets
 

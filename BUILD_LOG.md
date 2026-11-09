@@ -1,20 +1,21 @@
 # Build log
 
 ## Done
-- Cars: add, edit, delete; car selector with remembered car; Overview tab; All cars view (FR-1, FR-3 to FR-6) — Add, edit and delete cars; car selector; Overview and All cars (FR-1, FR-3 to FR-6)
-- Color and car photo (FR-1, FR-7) — Color and car photo (FR-1, FR-7)
-- VIN lookup through NHTSA (FR-2) — VIN lookup through NHTSA (FR-2)
-- Mileage readings (FR-10, FR-11) — Mileage readings (FR-10, FR-11 for the readings themselves; the automatic reading from service records arrives with service records)
-- Service records, typed in (FR-12 to FR-14) — Service records, typed in (FR-11 to FR-14)
-- Due dates and "Due soon" (FR-15 to FR-17) — Due dates and "Due soon" (FR-15 to FR-17)
-- Private cars ("Only me") (FR-8) — Private cars ("Only me") (FR-8)
-- Starred cars and sorting (FR-9) — Starred cars and sorting (FR-9)
-- Invoice PDF upload, parsing and review (FR-18 to FR-23) — Invoice PDF upload, parsing and review (FR-18 to FR-23)
-- Recommended work from declined jobs (FR-24 to FR-26) — Recommended work from declined jobs (FR-24 to FR-26)
-- Warranties (FR-27) — Warranties (FR-27)
-- Loan payoff (FR-28) — Loan payoff (FR-28)
+- Cars: add, edit, delete; car selector with remembered car; Overview tab; All cars view (FR-1, FR-3 to FR-6) — Add, edit and delete cars with a car selector, Overview and All cars
+- Color and car photo (FR-1, FR-7) — Add car color and a resized, privately stored car photo (FR-1, FR-7)
+- VIN lookup through NHTSA (FR-2) — Fill car details from the VIN with the NHTSA lookup (FR-2)
+- Mileage readings (FR-10, FR-11) — Add mileage readings and the car's current mileage (FR-10); FR-11's automatic reading came with service records
+- Service records, typed in (FR-12 to FR-14) — Log, list, search, edit and delete service records (FR-11 to FR-14)
+- Due dates and "Due soon" (FR-15 to FR-17) — Add due items, the Due tab and Due soon markers (FR-15 to FR-17)
+- Private cars ("Only me") (FR-8) — Let the person who added a car mark it Only me, with audit and export scoping (FR-8)
+- Starred cars and sorting (FR-9) — Add personal car stars and sort order (FR-9)
+- Invoice PDF upload, parsing and review (FR-18 to FR-23) — Upload invoice PDFs, read them and review before saving, with duplicate warning (FR-18 to FR-23, FR-24 creation)
+- Recommended work from declined jobs (FR-24 to FR-26) — Add the To do tab for recommended work (FR-24 to FR-26)
+- Warranties (FR-27) — Work out warranty end dates and add warranty-ends due items (FR-27)
+- Loan payoff (FR-28) — Add an encrypted car loan with its payoff date as a due item (FR-28)
 
 ## Next
+- Nothing: every item in the version 1 to-do list is built and ticked.
 
 ## Decisions
 - Navigation tabs act on the user's remembered selected car (stored per user in user_prefs), so tab URLs have no car id.
@@ -35,6 +36,8 @@
 - Recommended work: the To do tab total sums quoted prices of open items (items without a price are counted separately). Dismissed or done items can be reopened from the collapsed history.
 - Warranty: each service item can carry months and/or miles; the app keeps one 'warranty ends' due item per such item (end date = service date + months, clamped to month end; end mileage = service mileage + warranty miles). These items follow the service record: they can be marked done but not edited or deleted on the Due tab.
 - Loan: stored encrypted on the car (lender, final date, monthly amount); the final payment date is also kept as a plain 'loan payoff' due item (the app needs to sort and flag it), which follows the car's loan and can be marked done but not edited on the Due tab.
+- Fixture and sample data in tests are invented (shop 'Example Auto Care', make 'Acme', VIN 1A4AA11AA1A111111); nothing from the private notes is in the repo.
 
 ## Needs a human
-- Create a Vercel Blob store and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.
+- Create a Vercel Blob store with private access and connect it to the project (adds BLOB_READ_WRITE_TOKEN) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so try one photo upload after connecting.
+- Try the invoice import with one real invoice. The parser was only tested on an invented fixture in the documented layout; if the real PDF's text comes out differently the upload still works (the file is kept and an empty record opens), but the parser in app/invoice.py may need adjusting.

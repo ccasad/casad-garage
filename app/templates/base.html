@@ -71,7 +71,7 @@
   <div class="{% if user %}md:pl-60{% endif %}">
     <header class="safe-top sticky top-0 z-10 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
       <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 md:h-16 md:px-8">
-        <h1 class="flex items-center gap-2 text-lg font-semibold md:text-xl">{% if header_icon %}{% set hue_text = {"violet": "text-violet-600 dark:text-violet-400", "emerald": "text-emerald-600 dark:text-emerald-400", "indigo": "text-indigo-600 dark:text-indigo-400"} %}{{ icon(header_icon, "size-6 " ~ hue_text.get(header_hue, "text-sky-600 dark:text-sky-400")) }}{% endif %}{{ page_title }}</h1>
+        <h1 class="flex min-w-0 items-center gap-2 truncate text-lg font-semibold md:text-xl">{% if header_icon %}{% set hue_text = {"violet": "text-violet-600 dark:text-violet-400", "emerald": "text-emerald-600 dark:text-emerald-400", "indigo": "text-indigo-600 dark:text-indigo-400"} %}{{ icon(header_icon, "size-6 " ~ hue_text.get(header_hue, "text-sky-600 dark:text-sky-400")) }}{% endif %}{{ page_title }}</h1>
         {% if selector is not none %}{% include "partials/car_selector.html" %}{% endif %}
       </div>
     </header>
