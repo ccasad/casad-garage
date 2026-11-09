@@ -33,6 +33,7 @@ class CarForm:
     color: str = ""
     plate: str = ""
     notes: str = ""
+    visibility: str = "shared"
     errors: dict[str, str] = field(default_factory=dict)
 
     @classmethod
@@ -48,6 +49,7 @@ class CarForm:
             color=car.color or "",
             plate=car.plate or "",
             notes=car.notes or "",
+            visibility=car.visibility,
         )
 
     def clean(self) -> None:
@@ -69,6 +71,8 @@ class CarForm:
                 self.errors[name] = f"Keep this under {limit} characters."
         if len(self.plate) > 20:
             self.errors["plate"] = "Keep this under 20 characters."
+        if self.visibility not in ("shared", "private"):
+            self.visibility = "shared"
         if len(self.notes) > 4000:
             self.errors["notes"] = "Keep notes under 4000 characters."
 
@@ -97,8 +101,9 @@ def form_dependency(
     color: Annotated[str, Form(max_length=100)] = "",
     plate: Annotated[str, Form(max_length=100)] = "",
     notes: Annotated[str, Form(max_length=8000)] = "",
+    visibility: Annotated[str, Form(max_length=10)] = "shared",
 ) -> CarForm:
-    form = CarForm(year, make, model, nickname, vin, trim, engine, color, plate, notes)
+    form = CarForm(year, make, model, nickname, vin, trim, engine, color, plate, notes, visibility)
     form.clean()
     return form
 
@@ -118,6 +123,7 @@ def car_form_page(
         db=db,
         form=form,
         car=car,
+        can_set_visibility=car is None or car.added_by_id == user.id,
         status_code=422 if form.errors else 200,
     )
 
@@ -160,12 +166,12 @@ def new_car_form(request: Request, db: DbSession, user: SignedInUser) -> HTMLRes
 def create_car(request: Request, db: DbSession, user: SignedInUser, form: SubmittedCar) -> Response:
     if form.errors:
         return car_form_page(request, db, user, form, None)
-    car = Car(added_by_id=user.id, year=0, make="", model="")
+    car = Car(added_by_id=user.id, year=0, make="", model="", visibility=form.visibility)
     form.apply(car)
     db.add(car)
     db.flush()
     cars.select_car(db, user, car)
-    audit.record(db, "car_added", user_id=user.id, car_id=str(car.id))
+    audit.record(db, "car_added", user_id=user.id, car_id=str(car.id), visibility=car.visibility)
     db.commit()
     return RedirectResponse("/", status_code=303)
 
@@ -186,6 +192,12 @@ def update_car(
     if form.errors:
         return car_form_page(request, db, user, form, car)
     form.apply(car)
+    # Only the person who added a car can change who sees it (FR-8).
+    if car.added_by_id == user.id and form.visibility != car.visibility:
+        car.visibility = form.visibility
+        audit.record(
+            db, "car_visibility_changed", user_id=user.id, car_id=str(car.id), to=car.visibility
+        )
     db.commit()
     return RedirectResponse("/", status_code=303)
 

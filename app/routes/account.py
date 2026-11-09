@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app import audit
+from app import audit, exporter
 from app.config import get_settings
 from app.models import User
 from app.sessions import SESSION_COOKIE, DbSession, SignedInUser, same_origin
@@ -44,6 +44,7 @@ def export_data(db: Session, user: User) -> dict[str, Any]:
             "last_active_at": iso(user.last_active_at),
             "passkeys": len(user.passkeys),
         },
+        **exporter.garage_data(db, user),
     }
 
 

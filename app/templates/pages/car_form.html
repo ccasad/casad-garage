@@ -6,6 +6,19 @@
 <form method="post" action="{{ '/cars/' ~ car.id ~ '/edit' if car else '/cars' }}" hx-boost="false" class="max-w-2xl space-y-4">
   {% if e %}<p role="alert" class="rounded-xl border border-red-300 bg-red-50 px-4 py-3 text-sm dark:border-red-800 dark:bg-red-950">Fix the highlighted fields and save again.</p>{% endif %}
   {% include "partials/car_fields.html" %}
+  {% if can_set_visibility %}
+  <fieldset>
+    <legend class="mb-1 text-sm font-medium">Who can see this car</legend>
+    <div class="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+      {% for value, label in [("shared", "Shared"), ("private", "Only me")] %}
+      <label class="flex min-h-[44px] cursor-pointer items-center justify-center rounded-md text-sm font-medium has-[:checked]:bg-white has-[:checked]:shadow-sm dark:has-[:checked]:bg-slate-950">
+        <input type="radio" name="visibility" value="{{ value }}" class="sr-only" {% if form.visibility == value %}checked{% endif %}>{{ label }}
+      </label>
+      {% endfor %}
+    </div>
+    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Shared cars are seen and edited by everyone in the household. An "Only me" car, and everything recorded for it, is hidden from everyone else.</p>
+  </fieldset>
+  {% endif %}
   {{ textarea("notes", "Notes", form.notes, e.notes) }}
   <div class="flex flex-wrap gap-2">
     {{ primary_button("Save car") }}

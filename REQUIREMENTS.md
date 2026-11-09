@@ -25,7 +25,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Mileage readings (FR-10, FR-11)
 - [x] Service records, typed in (FR-12 to FR-14)
 - [x] Due dates and "Due soon" (FR-15 to FR-17)
-- [ ] Private cars ("Only me") (FR-8)
+- [x] Private cars ("Only me") (FR-8)
 - [ ] Starred cars and sorting (FR-9)
 - [ ] Invoice PDF upload, parsing and review (FR-18 to FR-23)
 - [ ] Recommended work from declined jobs (FR-24 to FR-26)
