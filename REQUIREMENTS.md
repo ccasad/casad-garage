@@ -32,6 +32,8 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Warranties (FR-27)
 - [x] Loan payoff (FR-28)
 - [x] The app's own car icon (NFR-17)
+- [ ] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
+- [ ] Check file storage button for the admin (FR-29)
 
 ## Users and access
 
@@ -59,7 +61,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 - **FR-4** The tabs act on the selected car: Overview (photo, facts, current mileage, "last done" per service type), Service (history, with + to log a service or upload an invoice), Due (its due items), To do (its recommended work). "All cars" shows every visible car as a card (photo, name, trim, color, current mileage, and its due-soon items); tapping a card selects that car.
 - **FR-5** A user edits any field of a car they can see.
 - **FR-6** The person who added a car, or the admin, deletes it after confirming; its records, documents and photo are deleted with it. Other members don't see a delete option.
-- **FR-7** A user adds or replaces one photo per car from the phone's camera or library. The photo is resized in the browser before upload (longest side 1600 px, JPEG) and shown on the Overview tab and on the car's card in All cars. Cars without a photo show a placeholder.
+- **FR-7** A user adds or replaces one photo per car from the phone's camera or library. The photo is resized in the browser before upload (longest side 1600 px, JPEG) and shown on the Overview tab and on the car's card in All cars. Cars without a photo show a placeholder. When an upload fails, the page shows the server's reason (for example "The photo is too large."), not a generic message.
 - **FR-8** Each car is **Shared** (default) or **Only me**. Only the person who added a car can change this. An "Only me" car, and everything attached to it, is never shown to anyone else, including in their data download.
 - **FR-9** Each user can star cars. In that user's car selector and All cars view, starred cars come first; the rest follow their chosen sort (name, year, or most recently serviced), which the app remembers per user. Stars and sort are personal: one person's choices don't change anyone else's list.
 
@@ -82,7 +84,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 **Invoice import**
 
-- **FR-18** From the Service tab, a user uploads a PDF invoice (up to 10 MB). The original is stored and listed under Documents for that car, where it can be opened.
+- **FR-18** From the Service tab, a user uploads a PDF invoice (up to 10 MB). The original is stored and listed under Documents for that car, where it can be opened. Uploads to the private Blob store match the official `@vercel/blob` client's requests exactly, and a failed invoice upload shows the reason.
 - **FR-19** The app reads the PDF's text and, for the supported shop invoice layout (below), extracts: repair order number, date, shop name, VIN, odometer, each job with its title, status (approved or declined), notes and price, and the grand total.
 - **FR-20** The app matches the invoice to a car by VIN; if no visible car matches, it asks which car, or offers to add a new one pre-filled from the invoice's vehicle line.
 - **FR-21** Before anything is saved, a review screen shows the service record (approved jobs) and the declined jobs; the user edits, removes or adds lines, then saves.
@@ -107,6 +109,7 @@ Supported layout (one shop's invoice system; a text PDF, two or more pages):
 
 - **FR-27** A service item can carry a warranty in months and/or miles (e.g. a battery with 36 months). The app works out the end date and adds a "warranty ends" due item.
 - **FR-28** A car can have a loan: lender, final payment date and an optional monthly amount. The final payment date shows as a due item.
+- **FR-29** On the admin's page under More, a **Check file storage** button saves a tiny test file to the store, reads it back, compares it, deletes it, and shows "File storage works" or the failing step with the status code and error code. It also shows which backend is active (Vercel Blob or local folder). Admin only; each check is recorded in the audit log.
 
 ## Data scope
 
@@ -141,6 +144,7 @@ All data is typed in by users, decoded from the VIN by the free NHTSA vPIC servi
 - **NFR-9** Each request finishes within 60 seconds; long work is split across requests.
 - **NFR-10** Pages load from stored data, without calling third parties, in under 2 seconds.
 - **NFR-16** Parsing an invoice PDF finishes within the upload request (text extraction only, no image processing on the server).
+- **NFR-18** When a Blob request fails, the server logs the operation (put/get/delete), the HTTP status and Vercel's error `code` from the response body, with no file contents, tokens, paths or personal data.
 - **NFR-17** The app has its own icon: a simple white car seen from the side, flat and bold, on a solid background (hue = (sum of the slug's character codes × 47) mod 360, saturation 55%, lightness 42%). It replaces every icon the template shipped: each file under `icons` in the manifest, the `apple-touch-icon` and the favicon, keeping file names, sizes and formats. Icons are full-bleed squares with the car inside the central 80% (safe for maskable icons; manifest icons are `"any maskable"`). They are generated by `scripts/make_icons.py` (Pillow, dev dependency) from one 1024 px master, and the car stays recognisable at 32 px and 180 px.
 
 **Cost and operations**
