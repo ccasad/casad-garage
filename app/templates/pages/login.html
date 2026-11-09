@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mx-auto max-w-sm pt-8 text-center">
+  {% if notice %}<p role="status" class="mb-6 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm dark:border-sky-900 dark:bg-sky-950">{{ notice }}</p>{% endif %}
+  <img src="{{ url_for('static', path='icons/icon.svg') }}" alt="" class="mx-auto size-16 rounded-2xl">
+  <h2 class="mt-4 text-xl font-semibold">{{ app_name }}</h2>
+  <p class="mt-2 text-slate-500 dark:text-slate-400">Sign in with the passkey on this device, using Face ID, fingerprint or your device PIN.</p>
+
+  <button type="button" data-passkey="login"
+          class="mt-6 inline-flex min-h-[48px] w-full items-center justify-center rounded-lg bg-sky-600 px-5 font-semibold text-white hover:bg-sky-700 disabled:opacity-60 dark:bg-sky-500 dark:hover:bg-sky-400 dark:text-slate-950">
+    Sign in with passkey
+  </button>
+  <p id="passkey-status" role="alert" class="mt-4 min-h-[1.5rem] text-sm text-red-600 dark:text-red-400"></p>
+
+  <p class="mt-6 text-sm text-slate-500 dark:text-slate-400">
+    New here, or on a new device? Ask the admin for an invite link.
+  </p>
+</div>
+{% endblock %}

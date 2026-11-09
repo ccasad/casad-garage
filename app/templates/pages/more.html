@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import icon, icon_badge %}
+{% block content %}
+{% if user.is_admin %}
+<a href="/admin/people"
+   class="mb-4 flex min-h-[56px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+  {{ icon_badge("user-plus", "violet") }}
+  <div class="flex-1">
+    <p class="font-medium">Invite and manage people</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Send invite links, remove accounts</p>
+  </div>
+  {{ icon("chevron", "size-5 shrink-0 text-slate-400") }}
+</a>
+{% endif %}
+
+<a href="/account"
+   class="mb-4 flex min-h-[56px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
+  {{ icon_badge("settings") }}
+  <div class="flex-1">
+    <p class="font-medium">Your data</p>
+    <p class="text-sm text-slate-500 dark:text-slate-400">Download everything, or delete your account</p>
+  </div>
+  {{ icon("chevron", "size-5 shrink-0 text-slate-400") }}
+</a>
+
+<section aria-labelledby="appearance-heading" class="mt-6 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+  <h2 id="appearance-heading" class="flex items-center gap-3 font-medium">{{ icon_badge("moon", "indigo") }}Appearance</h2>
+  {# Full page load, not hx-boost: the theme lives on <html>, outside the swapped body. #}
+  <form method="post" action="/settings/theme" hx-boost="false"
+        class="mt-3 grid grid-cols-3 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800">
+    {% for value, label in [("dark", "Dark"), ("light", "Light"), ("system", "System")] %}
+    <button type="submit" name="theme" value="{{ value }}" aria-pressed="{{ 'true' if theme == value else 'false' }}"
+            class="min-h-[44px] rounded-md text-sm font-medium
+                   {% if theme == value %}bg-white text-slate-900 shadow-sm dark:bg-slate-950 dark:text-slate-100
+                   {% else %}text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100{% endif %}">
+      {{ label }}
+    </button>
+    {% endfor %}
+  </form>
+  <p class="mt-2 text-xs text-slate-500 dark:text-slate-400">System follows your device's light or dark setting.</p>
+</section>
+
+<form method="post" action="/logout" hx-boost="false" class="mt-6">
+  <button type="submit"
+          class="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white font-medium text-red-600 dark:border-slate-800 dark:bg-slate-900 dark:text-red-400">
+    {{ icon("log-out", "size-5") }} Sign out {{ user.display_name }}
+  </button>
+</form>
+{% endblock %}

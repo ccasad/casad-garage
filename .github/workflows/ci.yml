@@ -1,0 +1,43 @@
+# Lint, tests and a secret scan on every push. Runs only for pushes by ccasad:
+# no pull_request, issue or comment triggers, so nobody else can start it.
+name: CI
+
+on:
+  push:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    if: github.actor == 'ccasad' && github.triggering_actor == 'ccasad'
+    runs-on: ubuntu-24.04   # same as the toolbox image; move both together
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # gitleaks scans the whole history
+
+      - name: Scan for secrets (gitleaks)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+        run: |
+          curl -fsSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks git --redact --no-banner .
+
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          version: "0.13.7"
+
+      - name: Install
+        run: uv sync --frozen
+
+      - name: Lint
+        run: |
+          uv run --frozen ruff check .
+          uv run --frozen ruff format --check .
+
+      - name: Test
+        run: uv run --frozen pytest

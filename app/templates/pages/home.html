@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% from "partials/icons.html" import empty_state %}
+{% block content %}
+{#- Placeholder: replace with the app's own home screen. -#}
+<p class="mb-6 text-slate-600 dark:text-slate-300">Hi {{ user.display_name }}.</p>
+{{ empty_state("Nothing here yet", "This is the template's placeholder home page. The app's own features go here.", "home", "sky") }}
+{% endblock %}

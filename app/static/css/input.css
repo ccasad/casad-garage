@@ -1,0 +1,44 @@
+/* Tailwind source. Build to app.css with `uv run python scripts/build_css.py`. */
+@import "tailwindcss";
+@source "../../templates";
+
+/* Dark mode follows <html data-theme>: "dark", "light", or "system" (the device setting). */
+@custom-variant dark {
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where([data-theme="system"], [data-theme="system"] *) {
+      @slot;
+    }
+  }
+}
+
+@layer base {
+  /* On iOS, size text from the user's Dynamic Type setting.
+     Tailwind sizes are in rem, so the whole UI scales with it. */
+  @supports (font: -apple-system-body) {
+    html {
+      font: -apple-system-body;
+      font-family: var(--default-font-family);
+    }
+  }
+}
+
+/* Keep content clear of the notch and home indicator in standalone mode. */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Leaves room for the fixed bottom tab bar on phones; sidebar layout needs none. */
+@utility safe-bottom-nav {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+
+  @media (width >= 48rem) {
+    padding-bottom: 2rem;
+  }
+}

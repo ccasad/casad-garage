@@ -1,0 +1,101 @@
+{% from "partials/icons.html" import icon %}
+<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{{ page_title }} · {{ app_name }}</title>
+  {% if theme == "system" %}
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#020617" media="(prefers-color-scheme: dark)">
+  {% else %}
+  <meta name="color-scheme" content="{{ theme }}">
+  <meta name="theme-color" content="{{ '#020617' if theme == 'dark' else '#f8fafc' }}">
+  {% endif %}
+  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="{{ url_for('static', path='icons/icon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', path='icons/apple-touch-icon.png') }}">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="{{ app_name }}">
+
+  <link rel="stylesheet" href="{{ url_for('static', path='css/app.css') }}">
+  <script src="{{ url_for('static', path='js/htmx.min.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/app.js') }}" defer></script>
+  <script src="{{ url_for('static', path='js/passkeys.js') }}" defer></script>
+</head>
+<body class="min-h-dvh bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100" hx-boost="true">
+  <div id="offline-banner" role="status" hidden class="safe-top fixed inset-x-0 top-0 z-50 bg-amber-500 text-slate-950">
+    <p class="px-4 py-2 text-center text-sm font-medium">
+      You're offline. Your data isn't stored on this device, so reconnect to see it.
+    </p>
+  </div>
+
+  {% if user %}
+  {# Laptop: left sidebar #}
+  <aside class="hidden md:fixed md:inset-y-0 md:left-0 md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:bg-white md:dark:border-slate-800 md:dark:bg-slate-900">
+    <div class="flex h-16 items-center gap-2 px-5 font-semibold">
+      <img src="{{ url_for('static', path='icons/icon.svg') }}" alt="" class="size-7 rounded-md">
+      <span>{{ app_name }}</span>
+    </div>
+    <nav aria-label="Main" class="flex-1 px-3 py-2">
+      <ul class="space-y-1">
+        {% for item in nav_items %}
+        <li>
+          <a href="{{ item.href }}"
+             {% if item.key == active %}aria-current="page"{% endif %}
+             class="flex min-h-[44px] items-center gap-3 rounded-lg px-3 text-sm font-medium
+                    {% if item.key == active %}bg-sky-50 text-sky-700 dark:bg-sky-950 dark:text-sky-300
+                    {% else %}text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100{% endif %}">
+            {{ icon(item.icon, "size-5 shrink-0") }}
+            <span>{{ item.label }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </nav>
+    <div class="border-t border-slate-200 px-5 py-4 text-sm dark:border-slate-800">
+      <p class="truncate font-medium">{{ user.display_name }}</p>
+      <form method="post" action="/logout" hx-boost="false">
+        <button type="submit" class="min-h-[44px] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  {% endif %}
+
+  <div class="{% if user %}md:pl-60{% endif %}">
+    <header class="safe-top sticky top-0 z-10 border-b border-slate-200 bg-slate-50/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
+      <div class="mx-auto flex h-14 max-w-5xl items-center justify-between gap-3 px-4 md:h-16 md:px-8">
+        <h1 class="flex items-center gap-2 text-lg font-semibold md:text-xl">{% if header_icon %}{% set hue_text = {"violet": "text-violet-600 dark:text-violet-400", "emerald": "text-emerald-600 dark:text-emerald-400", "indigo": "text-indigo-600 dark:text-indigo-400"} %}{{ icon(header_icon, "size-6 " ~ hue_text.get(header_hue, "text-sky-600 dark:text-sky-400")) }}{% endif %}{{ page_title }}</h1>
+      </div>
+    </header>
+
+    <main id="main" class="{% if user %}safe-bottom-nav{% else %}pb-8{% endif %} mx-auto max-w-5xl px-4 pt-6 md:px-8 md:pt-8">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  {% if user %}
+  {# Phone: bottom tab bar, one column per nav item #}
+  <nav aria-label="Main" class="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden dark:border-slate-800 dark:bg-slate-900/95">
+    <ul class="grid" style="grid-template-columns: repeat({{ nav_items | length }}, minmax(0, 1fr))">
+      {% for item in nav_items %}
+      <li>
+        <a href="{{ item.href }}"
+           {% if item.key == active %}aria-current="page"{% endif %}
+           class="flex min-h-[56px] flex-col items-center justify-center gap-0.5 text-xs font-medium
+                  {% if item.key == active %}text-sky-600 dark:text-sky-400{% else %}text-slate-500 dark:text-slate-400{% endif %}">
+          {{ icon(item.icon, "size-6") }}
+          <span>{{ item.label }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
+</body>
+</html>

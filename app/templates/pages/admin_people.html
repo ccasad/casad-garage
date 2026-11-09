@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl space-y-8">
+  <section>
+    <h2 class="font-semibold">Invite someone</h2>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+      They'll get a one-time link to create a passkey. It expires in 7 days. To add a passkey for
+      a new device, invite the same email again.
+    </p>
+
+    {% if new_link %}
+    <div class="mt-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-800 dark:bg-emerald-950">
+      <p class="text-sm font-medium">Invite created. Send this link privately; it's shown only once.</p>
+      <div class="mt-2 flex gap-2">
+        <input id="invite-link" readonly value="{{ new_link }}"
+               class="min-h-[44px] min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+        <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('invite-link').value).then(() => { this.textContent = 'Copied' })"
+                class="min-h-[44px] shrink-0 rounded-lg bg-slate-900 px-4 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-900">Copy</button>
+      </div>
+    </div>
+    {% endif %}
+
+    <form method="post" action="/admin/invites" class="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+      <label class="block text-sm">
+        <span class="font-medium">Name</span>
+        <input name="display_name" required maxlength="100" autocomplete="off"
+               class="mt-1 block min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <label class="block text-sm">
+        <span class="font-medium">Email</span>
+        <input name="email" type="email" required maxlength="320" autocomplete="off"
+               class="mt-1 block min-h-[44px] w-full rounded-lg border border-slate-300 bg-white px-3 dark:border-slate-700 dark:bg-slate-900">
+      </label>
+      <button type="submit" class="min-h-[44px] rounded-lg bg-sky-600 px-5 font-semibold text-white hover:bg-sky-700 dark:bg-sky-500 dark:text-slate-950">Create invite</button>
+    </form>
+    {% if form_error %}<p role="alert" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ form_error }}</p>{% endif %}
+  </section>
+
+  {% if invites %}
+  <section>
+    <h2 class="font-semibold">Pending invites</h2>
+    <ul class="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+      {% for invite in invites %}
+      <li class="flex items-center justify-between gap-3 px-4 py-3">
+        <div class="min-w-0">
+          <p class="truncate font-medium">{{ invite.display_name }}</p>
+          <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ invite.email }} · expires {{ invite.expires_at.strftime("%b %-d") }}</p>
+        </div>
+        <form method="post" action="/admin/invites/{{ invite.id }}/revoke">
+          <button type="submit" class="min-h-[44px] px-2 text-sm text-red-600 dark:text-red-400">Revoke</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2 class="font-semibold">People</h2>
+    <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">When each person was last active, and how often they signed in. Nothing else about their use is recorded.</p>
+    <ul class="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900">
+      {% for person in users %}
+      <li class="flex items-center justify-between gap-3 px-4 py-3">
+        <div class="min-w-0">
+          <p class="truncate font-medium">{{ person.display_name }}{% if person.is_admin %} <span class="text-xs font-normal text-slate-500">· admin</span>{% endif %}</p>
+          <p class="truncate text-sm text-slate-500 dark:text-slate-400">{{ person.email }} · {{ person.passkeys | length }} passkey{{ "" if person.passkeys | length == 1 else "s" }}</p>
+          {% set count = sign_ins.get(person.id, 0) %}
+          <p class="truncate text-sm text-slate-500 dark:text-slate-400">
+            {% if person.last_active_at %}Active {{ person.last_active_at | ago }} · {{ count }} sign-in{{ "" if count == 1 else "s" }} in 30 days{% else %}Hasn't signed in yet{% endif %}
+          </p>
+        </div>
+        {% if person.id != user.id %}
+        <form method="post" action="/admin/users/{{ person.id }}/remove"
+              hx-confirm="Remove {{ person.display_name }}? This deletes their account and passkeys.">
+          <button type="submit" class="min-h-[44px] px-2 text-sm text-red-600 dark:text-red-400">Remove</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}
