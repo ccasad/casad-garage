@@ -273,3 +273,18 @@ def test_deleting_a_car_deletes_its_due_items(client, db, member):
     client.post(f"/cars/{car.id}/delete")
 
     assert db.scalar(select(func.count()).select_from(DueItem)) == 0
+
+
+def test_overview_puts_photo_star_and_edit_in_one_row(client, db, member):
+    car = make_car(db, member)
+    sign_in(client, db, member)
+    client.post(f"/cars/{car.id}/select")
+
+    html = client.get("/").text
+    start = html.index("data-photo-row")
+    row = html[start : html.index('id="photo-status"', start)]
+    assert "data-photo-upload" in row
+    assert f"/cars/{car.id}/star" in row
+    assert f"/cars/{car.id}/edit" in row
+    heading = html[html.index("<h2", html.index('id="photo-status"')) :].split(">", 1)[0]
+    assert "truncate" not in heading

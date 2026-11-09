@@ -35,7 +35,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
 - [x] Check file storage button for the admin (FR-29)
 - [x] Reach the private Blob store with OIDC; Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
-- [ ] Put the star and Edit buttons on the photo row so the car name uses the full width (FR-4)
+- [x] Put the star and Edit buttons on the photo row so the car name uses the full width (FR-4)
 
 ## Users and access
 
