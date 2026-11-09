@@ -4,6 +4,7 @@ Files are private: they live in Vercel Blob (private access) under random paths,
 database keeps only the reference, and downloads go through the app's access check.
 Without BLOB_READ_WRITE_TOKEN, files go to a local folder so development works."""
 
+import logging
 import secrets
 from pathlib import Path
 from typing import Protocol
@@ -15,12 +16,30 @@ from app.config import get_settings
 BLOB_API = "https://vercel.com/api/blob"
 BLOB_API_VERSION = "13"
 
+log = logging.getLogger(__name__)
+
 
 class StorageError(Exception):
-    """File storage failed. The message is safe to show and log."""
+    """File storage failed. The message is safe to show and log.
+
+    For Blob failures, `operation`, `status` and `code` say which request failed and why."""
+
+    def __init__(
+        self,
+        message: str,
+        operation: str | None = None,
+        status: int | None = None,
+        code: str | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.operation = operation
+        self.status = status
+        self.code = code
 
 
 class Backend(Protocol):
+    name: str
+
     def put(self, pathname: str, data: bytes, content_type: str) -> str: ...
     def get(self, ref: str) -> bytes: ...
     def delete(self, ref: str) -> None: ...
@@ -30,9 +49,35 @@ def http_client() -> httpx2.Client:
     return httpx2.Client(timeout=httpx2.Timeout(25.0))
 
 
+def error_code(response: httpx2.Response) -> str | None:
+    """Vercel's error code from {"error": {"code": ...}}; never the message or anything else."""
+    try:
+        code = response.json()["error"]["code"]
+    except (ValueError, KeyError, TypeError):
+        return None
+    return code if isinstance(code, str) and len(code) <= 60 and code.isidentifier() else None
+
+
 class BlobBackend:
-    def __init__(self, token: str) -> None:
-        self.headers = {"authorization": f"Bearer {token}", "x-api-version": BLOB_API_VERSION}
+    """Mirrors the @vercel/blob client: PUT {api}/?pathname=..., POST {api}/delete, and a
+    GET of the blob URL, each with the bearer token."""
+
+    name = "Vercel Blob"
+
+    def __init__(self, token: str, api_url: str | None = None) -> None:
+        self.api = (api_url or BLOB_API).rstrip("/")
+        self.auth = {"authorization": f"Bearer {token}"}
+        self.headers = {**self.auth, "x-api-version": BLOB_API_VERSION}
+
+    def fail(
+        self, operation: str, message: str, response: httpx2.Response | None, exc: Exception
+    ) -> StorageError:
+        status = response.status_code if response is not None else None
+        code = error_code(response) if response is not None else None
+        log.warning(
+            "Blob %s failed: status=%s code=%s (%s)", operation, status, code, type(exc).__name__
+        )
+        return StorageError(message, operation, status, code)
 
     def put(self, pathname: str, data: bytes, content_type: str) -> str:
         headers = {
@@ -41,38 +86,43 @@ class BlobBackend:
             "x-add-random-suffix": "1",
             "x-content-type": content_type,
         }
+        response = None
         try:
             with http_client() as client:
                 response = client.put(
-                    BLOB_API, params={"pathname": pathname}, content=data, headers=headers
+                    f"{self.api}/", params={"pathname": pathname}, content=data, headers=headers
                 )
                 response.raise_for_status()
                 return response.json()["url"]
         except (httpx2.HTTPError, KeyError, ValueError) as exc:
-            raise StorageError("The file could not be saved.") from exc
+            raise self.fail("put", "The file could not be saved.", response, exc) from exc
 
     def get(self, ref: str) -> bytes:
+        response = None
         try:
             with http_client() as client:
-                response = client.get(ref, headers=self.headers)
+                response = client.get(ref, headers=self.auth)
                 response.raise_for_status()
                 return response.content
         except httpx2.HTTPError as exc:
-            raise StorageError("The file could not be read.") from exc
+            raise self.fail("get", "The file could not be read.", response, exc) from exc
 
     def delete(self, ref: str) -> None:
+        response = None
         try:
             with http_client() as client:
                 response = client.post(
-                    f"{BLOB_API}/delete", json={"urls": [ref]}, headers=self.headers
+                    f"{self.api}/delete", json={"urls": [ref]}, headers=self.headers
                 )
                 response.raise_for_status()
         except httpx2.HTTPError as exc:
-            raise StorageError("The file could not be deleted.") from exc
+            raise self.fail("delete", "The file could not be deleted.", response, exc) from exc
 
 
 class LocalBackend:
     """Development stand-in: files in a folder, referenced by their relative path."""
+
+    name = "Local folder"
 
     def __init__(self, root: str) -> None:
         self.root = Path(root)
@@ -106,7 +156,7 @@ class LocalBackend:
 def backend() -> Backend:
     settings = get_settings()
     if settings.blob_read_write_token:
-        return BlobBackend(settings.blob_read_write_token)
+        return BlobBackend(settings.blob_read_write_token, settings.vercel_blob_api_url)
     return LocalBackend(settings.local_storage_dir)
 
 
@@ -131,3 +181,38 @@ def remove(ref: str | None) -> None:
         backend().delete(ref)
     except StorageError:
         pass
+
+
+def check() -> tuple[str, bool, str]:
+    """Save, read back, compare and delete a tiny test file. Returns (backend name, ok, message)
+    where the message is "File storage works" or the failing step with status and error code."""
+    store = backend()
+    data = secrets.token_bytes(16)
+    ref = None
+
+    def failure(step: str, exc: StorageError) -> tuple[str, bool, str]:
+        detail = ", ".join(
+            part
+            for part in (
+                f"status {exc.status}" if exc.status else "",
+                f"error code {exc.code}" if exc.code else "",
+            )
+            if part
+        )
+        return store.name, False, f"{step} failed" + (f" ({detail})" if detail else f": {exc}")
+
+    try:
+        ref = store.put(new_pathname("checks", "txt"), data, "text/plain")
+    except StorageError as exc:
+        return failure("Saving the test file", exc)
+    try:
+        if store.get(ref) != data:
+            return store.name, False, "Reading back the test file failed (contents differ)"
+    except StorageError as exc:
+        remove(ref)
+        return failure("Reading back the test file", exc)
+    try:
+        store.delete(ref)
+    except StorageError as exc:
+        return failure("Deleting the test file", exc)
+    return store.name, True, "File storage works"

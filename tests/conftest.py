@@ -115,6 +115,8 @@ def make_car(db, owner, *, visibility="shared", year=2019, make="Acme", model="R
 class MemoryBackend:
     """Files in a dict, standing in for Vercel Blob."""
 
+    name = "Memory"
+
     def __init__(self):
         self.files: dict[str, bytes] = {}
 

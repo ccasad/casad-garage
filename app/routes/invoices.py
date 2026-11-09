@@ -84,8 +84,9 @@ async def upload(
 
     try:
         ref = storage.save("invoices", "pdf", data, "application/pdf")
-    except storage.StorageError:
-        return RedirectResponse("/service?notice=storage", status_code=303)
+    except storage.StorageError as exc:
+        notice = "storage-setup" if exc.operation is None else "storage"
+        return RedirectResponse(f"/service?notice={notice}", status_code=303)
 
     doc = Document(
         uploaded_by_id=user.id,

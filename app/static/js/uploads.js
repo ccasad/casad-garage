@@ -16,12 +16,12 @@
         canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
         URL.revokeObjectURL(url);
         canvas.toBlob(function (blob) {
-          blob ? resolve(blob) : reject(new Error("resize failed"));
+          blob ? resolve(blob) : reject(new Error("The photo couldn't be resized."));
         }, "image/jpeg", 0.85);
       };
       img.onerror = function () {
         URL.revokeObjectURL(url);
-        reject(new Error("unreadable image"));
+        reject(new Error("The photo couldn't be read."));
       };
       img.src = url;
     });
@@ -42,11 +42,18 @@
         return fetch(input.dataset.photoUpload, { method: "POST", body: body, credentials: "same-origin" });
       })
       .then(function (response) {
-        if (!response.ok) throw new Error("upload failed");
-        window.location.reload();
+        if (response.ok) return window.location.reload();
+        return response.json().then(
+          function (body) {
+            throw new Error(typeof body.detail === "string" ? body.detail : "");
+          },
+          function () {
+            throw new Error("");
+          }
+        );
       })
-      .catch(function () {
-        say("The photo couldn't be uploaded. Try again.");
+      .catch(function (error) {
+        say(error.message || "The photo couldn't be uploaded. Try again.");
         input.value = "";
       });
   });

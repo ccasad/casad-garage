@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     # Vercel Blob (photos, invoices). Without a token, files go to a local folder (development).
     blob_read_write_token: str | None = None
+    # Override the Blob API base (the SDK reads VERCEL_BLOB_API_URL too).
+    vercel_blob_api_url: str | None = None
     local_storage_dir: str = ".local-storage"
     # Passkeys are bound to this domain; changing it invalidates every passkey.
     webauthn_rp_id: str = "localhost"

@@ -32,8 +32,8 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Warranties (FR-27)
 - [x] Loan payoff (FR-28)
 - [x] The app's own car icon (NFR-17)
-- [ ] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
-- [ ] Check file storage button for the admin (FR-29)
+- [x] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
+- [x] Check file storage button for the admin (FR-29)
 
 ## Users and access
 

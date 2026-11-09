@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app import audit
+from app import audit, storage
 from app.invites import create_invite, invite_url, normalize_email, purge_spent_invites
 from app.models import Invite, User
 from app.sessions import AdminUser, DbSession, same_origin
@@ -91,3 +91,33 @@ def remove_user(user_id: uuid.UUID, db: DbSession, admin: AdminUser) -> Redirect
     audit.record(db, "user_removed", user_id=admin.id, removed_user_id=str(user_id))
     db.commit()
     return RedirectResponse("/admin/people", status_code=303)
+
+
+def storage_page(
+    request: Request, admin: User, db: Session, result: tuple[str, bool, str] | None = None
+) -> HTMLResponse:
+    backend_name = result[0] if result else storage.backend().name
+    return render(
+        request,
+        "pages/admin_storage.html",
+        title="File storage",
+        user=admin,
+        active="more",
+        db=db,
+        backend_name=backend_name,
+        result=result,
+    )
+
+
+@router.get("/storage", response_class=HTMLResponse)
+def storage_status(request: Request, db: DbSession, admin: AdminUser) -> HTMLResponse:
+    return storage_page(request, admin, db)
+
+
+@router.post("/storage/check", response_class=HTMLResponse, dependencies=[Depends(same_origin)])
+def storage_check(request: Request, db: DbSession, admin: AdminUser) -> HTMLResponse:
+    """Save, read back, compare and delete a tiny test file (FR-29)."""
+    result = storage.check()
+    audit.record(db, "storage_checked", user_id=admin.id, backend=result[0], ok=result[1])
+    db.commit()
+    return storage_page(request, admin, db, result)
