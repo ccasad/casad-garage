@@ -35,6 +35,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Fix uploads to Vercel Blob, show upload errors, log Blob failures (FR-7, FR-18, NFR-18)
 - [x] Check file storage button for the admin (FR-29)
 - [x] Reach the private Blob store with OIDC; Check file storage reports the method (FR-7, FR-18, FR-29, NFR-14)
+- [ ] Put the star and Edit buttons on the photo row so the car name uses the full width (FR-4)
 
 ## Users and access
 
@@ -59,7 +60,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 - **FR-1** A user adds a car with year, make and model (required) and optional nickname, VIN, trim, engine, color, plate and notes. The car appears in the car selector and becomes the selected car.
 - **FR-2** On the add/edit form, the user enters a VIN and taps **Look up**; the app calls the NHTSA vPIC decode service and fills year, make, model, trim and engine. Every filled field stays editable. If the lookup fails or returns nothing, the app says so and the user types the details.
 - **FR-3** A car selector sits at the top right of every page. It lists the cars the user can see (in their star and sort order, FR-9), with a dot on any car that has items due soon, an "All cars" entry at the top, and "+ Add a car" at the bottom. Choosing a car makes it the selected car, and the tabs show that car. The app remembers the last selected car per user and opens on it; only when there is none (first visit, or that car was deleted or made private) does the page say "Pick a car above".
-- **FR-4** The tabs act on the selected car: Overview (photo, facts, current mileage, "last done" per service type), Service (history, with + to log a service or upload an invoice), Due (its due items), To do (its recommended work). "All cars" shows every visible car as a card (photo, name, trim, color, current mileage, and its due-soon items); tapping a card selects that car.
+- **FR-4** The tabs act on the selected car: Overview (photo, then one row with the photo button on the left and the star button and Edit link on the right, then the full-width car name, facts, current mileage, "last done" per service type), Service (history, with + to log a service or upload an invoice), Due (its due items), To do (its recommended work). "All cars" shows every visible car as a card (photo, name, trim, color, current mileage, and its due-soon items); tapping a card selects that car.
 - **FR-5** A user edits any field of a car they can see.
 - **FR-6** The person who added a car, or the admin, deletes it after confirming; its records, documents and photo are deleted with it. Other members don't see a delete option.
 - **FR-7** A user adds or replaces one photo per car from the phone's camera or library. The photo is resized in the browser before upload (longest side 1600 px, JPEG) and shown on the Overview tab and on the car's card in All cars. Cars without a photo show a placeholder. When an upload fails, the page shows the server's reason (for example "The photo is too large."), not a generic message.
