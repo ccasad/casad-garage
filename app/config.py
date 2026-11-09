@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     app_env: str = "development"
     app_base_url: str = "http://localhost:8000"
-    app_name: str = "Template App"
+    app_name: str = "Casad Garage"
 
     session_idle_minutes: int = 30
     token_encryption_key: str | None = None

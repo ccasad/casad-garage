@@ -18,7 +18,7 @@ def test_export_has_the_account_but_no_secrets(client, db, member):
     response = client.get("/account/export")
 
     assert response.headers["content-type"] == "application/json"
-    assert response.headers["content-disposition"].startswith('attachment; filename="template-app-')
+    assert response.headers["content-disposition"].startswith('attachment; filename="casad-garage-')
     assert response.headers["cache-control"] == "no-store"
     data = response.json()
     assert data["account"]["email"] == member.email

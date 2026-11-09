@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Template App",
-  "short_name": "Template",
-  "description": "Starting point for new apps.",
+  "name": "Casad Garage",
+  "short_name": "Garage",
+  "description": "Every car in the household: mileage, service history, what is due and what to do next.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

@@ -4,7 +4,7 @@ Context for Claude Code sessions in this repo.
 
 ## What this is
 
-CHANGE ME: two or three sentences on what the app does and for whom.
+Casad Garage is a shared garage for a household. It keeps each car's facts, mileage readings, service history, upcoming due dates and shop-recommended work in one place, fills car details from the VIN, and imports a shop's PDF invoice instead of typing it. Everyone in the household sees the shared cars; a car can be marked private to the person who added it.
 
 **Read REQUIREMENTS.md before starting any task.** Requirement IDs (FR-x, NFR-x) are the source of truth; reference them in commits. README.md explains how the built parts work.
 
@@ -22,10 +22,10 @@ Use the Makefile: `make up`, `make test`, `make lint`, `make format`, `make css`
 
 Built (from app-template): passkey sign-in and invites, server-side sessions, audit log, activity (last active, sign-ins) for the admin, Your data (download and delete), Dark/Light/System theme, PWA shell, phone tabs and laptop sidebar, encrypted column types.
 
-Not built yet: everything in REQUIREMENTS.md.
+Built for this app: see BUILD_LOG.md for what is done and what is next. Anything still unticked in REQUIREMENTS.md is not built yet.
 
 Next, in order:
-1. CHANGE ME
+1. Follow the feature to-do list in REQUIREMENTS.md, top to bottom (BUILD_LOG.md tracks progress).
 
 ## Rules
 

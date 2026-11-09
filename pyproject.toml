@@ -1,7 +1,7 @@
 [project]
-name = "app-template"
+name = "casad-garage"
 version = "0.1.0"
-description = "Starting point for new apps: passkey sign-in, invites, PWA shell"
+description = "Shared household garage: cars, mileage, service history, due dates, invoice import"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
@@ -11,6 +11,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "psycopg[binary]>=3.3.7",
     "pydantic-settings>=2.16.2",
+    "pypdf>=7.0.0",
     "python-multipart>=0.0.33",
     "sqlalchemy>=2.1.8",
     "webauthn>=3.0.1",
@@ -31,6 +32,7 @@ dev = [
     "alembic>=1.20.1",
     "pytailwindcss>=0.4.2",
     "pytest>=9.2.0",
+    "reportlab>=5.1.0",
     "ruff>=0.17.3",
     "uvicorn[standard]>=0.54.0",
 ]

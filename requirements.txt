@@ -59,6 +59,8 @@ pydantic-settings==2.16.2
     # via app-template
 pyopenssl==26.4.0
     # via webauthn
+pypdf==7.0.0
+    # via app-template
 python-dotenv==1.2.4
     # via pydantic-settings
 python-multipart==0.0.33

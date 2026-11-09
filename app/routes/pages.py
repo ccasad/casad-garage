@@ -14,7 +14,7 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse, name="home")
 def home(request: Request, user: SignedInUser) -> HTMLResponse:
-    return render(request, "pages/home.html", title="Home", user=user, active="home")
+    return render(request, "pages/home.html", title="Home", user=user, active="overview")
 
 
 @router.get("/more", response_class=HTMLResponse, name="more")
