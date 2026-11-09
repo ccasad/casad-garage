@@ -39,6 +39,8 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Title number on cars (FR-1)
 - [x] Do-it-yourself services: Done by Shop / Myself (FR-12, FR-13)
 - [x] Brand and part number on service items (FR-12, FR-13)
+- [ ] Accept pre-1981 VINs: form, Look up and invoice matching (FR-1, FR-2, FR-20)
+- [ ] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
 
 ## Users and access
 
@@ -60,8 +62,8 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 **Cars**
 
-- **FR-1** A user adds a car with year, make and model (required) and optional nickname, VIN, trim, engine, color, plate, title number (up to 40 characters, stored encrypted like the plate, shown on the Overview tab after Plate and included in the data download) and notes. The car appears in the car selector and becomes the selected car.
-- **FR-2** On the add/edit form, the user enters a VIN and taps **Look up**; the app calls the NHTSA vPIC decode service and fills year, make, model, trim and engine. Every filled field stays editable. If the lookup fails or returns nothing, the app says so and the user types the details.
+- **FR-1** A user adds a car with year, make and model (required) and optional nickname, VIN, trim, engine, color, plate, VIN (a modern 17-character VIN, letters and digits without I, O or Q; or a pre-1981 VIN of 5 to 16 letters and digits, any letters; spaces and dashes are removed and it is stored upper-case; otherwise the form says "Enter a 17-character VIN, or the car's original VIN if it's from before 1981 (5 to 16 letters and numbers)."; stored encrypted whatever its length), title number (up to 40 characters, stored encrypted like the plate, shown on the Overview tab after Plate and included in the data download) and notes. The car appears in the car selector and becomes the selected car.
+- **FR-2** On the add/edit form, the user enters a VIN and taps **Look up**; the app calls the NHTSA vPIC decode service and fills year, make, model, trim and engine. Every filled field stays editable. If the lookup fails or returns nothing, the app says so and the user types the details. Look up only works for 17-character VINs: for a shorter VIN the button is disabled, the form shows "Pre-1981 VIN: enter the year, make and model yourself." under the field (replacing the generic error), and the server endpoint returns that message without calling NHTSA.
 - **FR-3** A car selector sits at the top right of every page. It lists the cars the user can see (in their star and sort order, FR-9), with a dot on any car that has items due soon, an "All cars" entry at the top, and "+ Add a car" at the bottom. Choosing a car makes it the selected car, and the tabs show that car. The app remembers the last selected car per user and opens on it; only when there is none (first visit, or that car was deleted or made private) does the page say "Pick a car above".
 - **FR-4** The tabs act on the selected car: Overview (photo, then one row with the photo button on the left and the star button and Edit link on the right, then the full-width car name, facts, current mileage, "last done" per service type), Service (history, with + to log a service or upload an invoice), Due (its due items), To do (its recommended work). "All cars" shows every visible car as a card (photo, name, trim, color, current mileage, and its due-soon items); tapping a card selects that car.
 - **FR-5** A user edits any field of a car they can see.
@@ -91,7 +93,7 @@ Invite-only: an admin plus the people they invite. No public sign-up.
 
 - **FR-18** From the Service tab, a user uploads a PDF invoice (up to 10 MB). The original is stored and listed under Documents for that car, where it can be opened. Uploads to the private Blob store match the official `@vercel/blob` client's requests exactly, and a failed invoice upload shows the reason. On Vercel the Blob backend authenticates with OIDC: `BLOB_STORE_ID` plus the Vercel OIDC token of the current request (the `x-vercel-oidc-token` header, or `VERCEL_OIDC_TOKEN` when set). Order: OIDC first; then `BLOB_READ_WRITE_TOKEN` if set (local development, or a store connected the older way); otherwise the local folder, and only when not running on Vercel (`VERCEL` unset). On Vercel with no usable credentials, saving fails with "File storage isn't connected: no BLOB_STORE_ID / OIDC token". Reading private blobs (photo, Documents) uses the same authentication.
 - **FR-19** The app reads the PDF's text and, for the supported shop invoice layout (below), extracts: repair order number, date, shop name, VIN, odometer, each job with its title, status (approved or declined), notes and price, and the grand total.
-- **FR-20** The app matches the invoice to a car by VIN; if no visible car matches, it asks which car, or offers to add a new one pre-filled from the invoice's vehicle line.
+- **FR-20** The app matches the invoice to a car by VIN (the invoice's `VIN:` line accepts 5 to 17 letters and digits; matching uses the same normalised value and keyed hash as the car form); if no visible car matches, it asks which car, or offers to add a new one pre-filled from the invoice's vehicle line.
 - **FR-21** Before anything is saved, a review screen shows the service record (approved jobs) and the declined jobs; the user edits, removes or adds lines, then saves.
 - **FR-22** If the PDF has no readable text or the layout isn't recognised, the app says so, keeps the file attached to the car, and opens an empty service record to fill in by hand.
 - **FR-23** Importing an invoice whose shop and repair order number already exist warns before saving a duplicate.
@@ -150,6 +152,7 @@ All data is typed in by users, decoded from the VIN by the free NHTSA vPIC servi
 - **NFR-10** Pages load from stored data, without calling third parties, in under 2 seconds.
 - **NFR-16** Parsing an invoice PDF finishes within the upload request (text extraction only, no image processing on the server).
 - **NFR-18** When a Blob request fails, the server logs the operation (put/get/delete), the HTTP status and Vercel's error `code` from the response body, with no file contents, tokens, paths or personal data.
+- **NFR-19** On the phone layout, while a text input, select or textarea has focus the bottom tab bar is hidden (a `keyboard-open` class on `<body>`, set on `focusin` and removed on `focusout` after a short delay so moving between fields doesn't flicker), and it returns when no field has focus. This works on every form with no per-page code; the laptop sidebar is unchanged. Pages keep enough bottom padding (including `env(safe-area-inset-bottom)`) that the last field and the Save button can scroll into view above the keyboard.
 - **NFR-17** The app has its own icon: a simple white car seen from the side, flat and bold, on a solid background (hue = (sum of the slug's character codes × 47) mod 360, saturation 55%, lightness 42%). It replaces every icon the template shipped: each file under `icons` in the manifest, the `apple-touch-icon` and the favicon, keeping file names, sizes and formats. Icons are full-bleed squares with the car inside the central 80% (safe for maskable icons; manifest icons are `"any maskable"`). They are generated by `scripts/make_icons.py` (Pillow, dev dependency) from one 1024 px master, and the car stays recognisable at 32 px and 180 px.
 
 **Cost and operations**
@@ -167,6 +170,7 @@ All data is typed in by users, decoded from the VIN by the free NHTSA vPIC servi
 - Fuel economy tracking, cost charts, cars being considered for purchase.
 - More than one photo per car; attaching other document types.
 - Working offline.
+- Decoding pre-1981 VINs (maker-specific formats).
 
 ## Open questions and risks
 
