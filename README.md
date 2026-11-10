@@ -58,7 +58,7 @@ The rest of this README describes the template this app started from.
 - **Your data** (`/account`): download everything as JSON, or delete the account (type DELETE). When you add tables that belong to a user, add them to `export_data()` in `app/routes/account.py` and give them `ForeignKey("users.id", ondelete="CASCADE")`.
 - **Encryption at rest**: `EncryptedText` and `EncryptedJSON` column types in `app/models.py`, keyed by `TOKEN_ENCRYPTION_KEY`.
 - **Appearance**: Dark (default), Light or System, saved on the account and in a cookie.
-- **PWA shell**: manifest, icons, a service worker that caches only the offline page, an offline banner. Every page is `Cache-Control: no-store`.
+- **PWA shell**: manifest, icons, a service worker that caches only the offline page and handles only GET navigations (form posts go straight to the network), an offline banner. Every page is `Cache-Control: no-store`.
 - **Layout**: bottom tabs on phones, a sidebar on laptops, both from `NAV_ITEMS` in `app/web.py` (up to five; keep More last). Usable at 360 px.
 - **Tests** (in-memory SQLite) and a test that the migrations build the same schema as the models.
 - **CI**: lint, tests and a gitleaks secret scan on every push, only for pushes by `ccasad`.
