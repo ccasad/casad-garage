@@ -42,6 +42,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Accept pre-1981 VINs: form, Look up and invoice matching (FR-1, FR-2, FR-20)
 - [x] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
 - [x] Fix invoice upload losing the PDF on iPhone: service worker handles only GET navigations (cache `offline-v2`), upload with fetch, friendly form errors (FR-18, NFR-20)
+- [ ] Read declined jobs that come after the payment history (FR-19)
 
 ## Users and access
 
@@ -105,6 +106,7 @@ Supported layout (one shop's invoice system; a text PDF, two or more pages):
 - Jobs: numbered lines `<n> - <TITLE>`, sometimes followed by `**<shop note>**` on the same line and a `Note: ...` paragraph. Each job ends with a status line `✓ Approved on <date>` or `✓ Authorized on <date>` and its total on the right.
 - A `Declined Jobs:` section lists more numbered jobs in the same form, each with `✘ Declined on <date>` and a total (sometimes `Subtotal $x + est. Tax $y   $total`; use the final amount).
 - `Grand Total: $<amount>` near the end of page 1.
+- Page 1 ends with the `Payment History` table and the page footer; page 2 starts with `Declined Jobs:`. Every line from `Payment History` until a `Declined Jobs` line (or the end) is skipped, so declined jobs that come after the payment history are still read.
 - The customer block (name, address, phone, email) and the `Payment History` table are ignored and never stored.
 
 **Recommended work**
