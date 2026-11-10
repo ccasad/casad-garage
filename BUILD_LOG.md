@@ -53,6 +53,8 @@
 - 007 (invoice upload fix): the service worker re-sending a multipart navigation drops the file on iPhone Safari, so it now handles only GET navigations (cache `offline-v2`). Invoice upload uses `fetch` like photos; script requests are told apart by `Accept: application/json` and get `{"next": url}` or `{"detail": reason}` (413 too large, 415 not a PDF, 400 no car, 502 storage), plain posts keep the 303 redirects. A global 422 handler shows a friendly page for HTML clients and JSON otherwise (NFR-20). **The same `sw.js` change should go into `app-template`.**
 - 008 (declined jobs on page 2): `Payment History` now starts a skip that ends at the next `Declined Jobs` line instead of stopping the parse, so nothing in the payment table or footer is read and declined jobs after it are. The fixture now matches the real layout (declined jobs on page 2).
 
+- 009: `same_origin()` accepts `Origin: null` only with `Sec-Fetch-Site: same-origin` (or, if that header is absent, a same-origin `Referer`); blocks are logged without personal data. The same `vercel.json` and `same_origin()` changes belong in `app-template`.
+
 ## Needs a human
 - After deploying 007, close and reopen the installed app on the iPhone so the new service worker takes over, then upload a shop PDF from the Service tab.
 - Check on an iPhone (installed app and Safari): open Add a car, tap into fields and scroll; the tab bar should stay hidden while typing and return after tapping outside the fields; Save should be reachable. Also add a car with an 11-character VIN. Not testable here.
@@ -68,3 +70,4 @@
 - 006-classic-vins-and-keyboard: accept pre-1981 VINs (form, Look up, invoice matching) and hide the phone tab bar while typing (FR-1, FR-2, FR-20, NFR-19)
 - 007-invoice-upload-fix: invoice upload works on iPhone (service worker ignores non-GET, upload via fetch) and form validation errors show a friendly page (FR-18, NFR-20)
 - 008-declined-jobs-page-2: the parser skips the payment history and still reads declined jobs on the next page (FR-19)
+- 009-same-origin-forms: own form posts with `Origin: null` are accepted when `Sec-Fetch-Site` is same-origin, `Referrer-Policy` is `same-origin`, blocked forms show a friendly page (NFR-21)
