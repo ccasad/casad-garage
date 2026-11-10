@@ -3,14 +3,17 @@
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
-from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exception_handlers import (
+    http_exception_handler,
+    request_validation_exception_handler,
+)
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.routes import account, admin, auth, cars, due, invoices, mileage, pages, service, todo
-from app.sessions import LoginRequired
+from app.sessions import CrossOriginBlocked, LoginRequired
 from app.storage import OidcMiddleware
 from app.web import STATIC_DIR, render
 
@@ -26,22 +29,45 @@ async def login_required(request: Request, exc: LoginRequired) -> Response:
     return RedirectResponse("/login", status_code=303)
 
 
+def wants_html(request: Request) -> bool:
+    accept = request.headers.get("accept", "")
+    return "application/json" not in accept and "text/html" in accept
+
+
+def back_link(request: Request) -> str:
+    back = urlsplit(request.headers.get("referer", ""))
+    return back.path if back.netloc == request.url.netloc and back.path.startswith("/") else "/"
+
+
 @app.exception_handler(RequestValidationError)
 async def invalid_form(request: Request, exc: RequestValidationError) -> Response:
     # NFR-20: a form post that fails validation gets a friendly page, not raw JSON.
-    if "application/json" in request.headers.get(
-        "accept", ""
-    ) or "text/html" not in request.headers.get("accept", ""):
+    if not wants_html(request):
         return await request_validation_exception_handler(request, exc)
-    back = urlsplit(request.headers.get("referer", ""))
-    link = back.path if back.netloc == request.url.netloc and back.path.startswith("/") else "/"
     return render(
         request,
         "pages/form_error.html",
         title="Something was missing",
         user=None,
         status_code=422,
-        back=link,
+        back=back_link(request),
+        message="Something was missing from the form. Please try again.",
+    )
+
+
+@app.exception_handler(CrossOriginBlocked)
+async def blocked_form(request: Request, exc: CrossOriginBlocked) -> Response:
+    # NFR-21: a blocked form post gets a friendly page; script requests keep the JSON 403.
+    if not wants_html(request):
+        return await http_exception_handler(request, exc)
+    return render(
+        request,
+        "pages/form_error.html",
+        title="Form not sent",
+        user=None,
+        status_code=403,
+        back=back_link(request),
+        message="This form couldn't be sent. Go back and try again.",
     )
 
 

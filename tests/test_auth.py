@@ -319,3 +319,42 @@ def test_invite_tokens_survive_messaging_apps(db):
     # Hex only: no `_` or `-` for chat apps to turn into italics or drop from a link.
     assert len(token) == 64
     assert set(token) <= set("0123456789abcdef")
+
+
+def _post(client, headers, accept=None):
+    client.headers.pop("Origin", None)
+    h = dict(headers)
+    if accept:
+        h["accept"] = accept
+    return client.post("/auth/login/options", headers=h)
+
+
+def test_same_origin_rules(client):
+    origin = "http://localhost:8000"
+    assert _post(client, {"Origin": origin}).status_code != 403
+    assert _post(client, {"Origin": "null", "Sec-Fetch-Site": "same-origin"}).status_code != 403
+    assert _post(client, {"Origin": "null", "Sec-Fetch-Site": "cross-site"}).status_code == 403
+    assert _post(client, {"Origin": "https://evil.example"}).status_code == 403
+    assert _post(client, {"Referer": origin + "/cars"}).status_code != 403
+    assert _post(client, {"Referer": "https://evil.example/"}).status_code == 403
+    assert _post(client, {"Referer": origin + ".evil.example/"}).status_code == 403
+    assert _post(client, {}).status_code == 403
+
+
+def test_blocked_html_form_post_shows_friendly_page(client, caplog):
+    page = _post(client, {"Origin": "null", "Sec-Fetch-Site": "cross-site"}, "text/html")
+    api = _post(client, {"Origin": "null", "Sec-Fetch-Site": "cross-site"}, "application/json")
+
+    assert page.status_code == 403
+    assert "This form couldn't be sent" in page.text.replace("&#39;", "'")
+    assert api.status_code == 403 and api.json()["detail"] == "Cross-origin request blocked"
+    assert "Blocked cross-origin request" in caplog.text
+
+
+def test_vercel_json_referrer_policy_is_same_origin():
+    import json
+    from pathlib import Path
+
+    config = json.loads((Path(__file__).parent.parent / "vercel.json").read_text())
+    headers = {h["key"]: h["value"] for h in config["headers"][0]["headers"]}
+    assert headers["Referrer-Policy"] == "same-origin"

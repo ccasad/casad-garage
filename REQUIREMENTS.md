@@ -43,7 +43,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
 - [x] Fix invoice upload losing the PDF on iPhone: service worker handles only GET navigations (cache `offline-v2`), upload with fetch, friendly form errors (FR-18, NFR-20)
 - [x] Read declined jobs that come after the payment history (FR-19)
-- [ ] Accept our own form posts that arrive with `Origin: null`, set `Referrer-Policy: same-origin`, friendly page for blocked forms (NFR-21)
+- [x] Accept our own form posts that arrive with `Origin: null`, set `Referrer-Policy: same-origin`, friendly page for blocked forms (NFR-21)
 
 ## Users and access
 

@@ -1,5 +1,6 @@
 """Server-side sessions: the cookie holds a random token, the database holds its hash."""
 
+import logging
 from datetime import timedelta
 from typing import Annotated
 
@@ -12,6 +13,8 @@ from app.config import get_settings
 from app.db import get_db
 from app.models import User, UserSession, utcnow
 from app.security import hash_token, new_token
+
+logger = logging.getLogger(__name__)
 
 SESSION_COOKIE = "session"
 ABSOLUTE_LIFETIME = timedelta(hours=12)
@@ -103,10 +106,38 @@ def require_admin(user: Annotated[User, Depends(require_user)]) -> User:
     return user
 
 
+class CrossOriginBlocked(HTTPException):
+    """Raised by same_origin; main.py shows a friendly page for HTML form posts (NFR-21)."""
+
+    def __init__(self) -> None:
+        super().__init__(status_code=403, detail="Cross-origin request blocked")
+
+
 def same_origin(request: Request) -> None:
-    """Reject state-changing requests sent from another site (CSRF)."""
-    if request.headers.get("origin") != get_settings().origin:
-        raise HTTPException(status_code=403, detail="Cross-origin request blocked")
+    """Reject state-changing requests sent from another site (CSRF).
+
+    Browsers send `Origin: null` on form posts from pages with a strict referrer policy, so
+    a missing or null Origin is accepted when the browser says the request is same-origin.
+    """
+    origin = request.headers.get("origin")
+    site = request.headers.get("sec-fetch-site")
+    settings_origin = get_settings().origin
+    if origin == settings_origin:
+        return
+    if origin in (None, "null"):
+        if site == "same-origin":
+            return
+        if site is None and request.headers.get("referer", "").startswith(settings_origin + "/"):
+            return
+    route = request.scope.get("route")
+    logger.warning(
+        "Blocked cross-origin request: method=%s path=%s origin=%s sec_fetch_site=%s",
+        request.method,
+        getattr(route, "path", "unknown"),
+        (origin or "")[:100] or "missing",
+        (site or "")[:30] or "missing",
+    )
+    raise CrossOriginBlocked()
 
 
 CurrentUser = Annotated[User | None, Depends(current_user)]
