@@ -1,6 +1,6 @@
 // Minimal service worker. The only thing it caches is a static offline page,
 // never an app page, API response or user data.
-const CACHE = "offline-v1";
+const CACHE = "offline-v2";
 const OFFLINE_URL = "/static/offline.html";
 
 self.addEventListener("install", (event) => {
@@ -22,7 +22,9 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Everything except page navigations goes straight to the network.
-  if (event.request.mode !== "navigate") return;
+  // Only GET page navigations get the offline fallback. Everything else, especially
+  // form POSTs, goes straight to the network: re-sending a multipart navigation from
+  // the worker can drop the file on iPhone Safari.
+  if (event.request.mode !== "navigate" || event.request.method !== "GET") return;
   event.respondWith(fetch(event.request).catch(() => caches.match(OFFLINE_URL)));
 });

@@ -588,3 +588,70 @@ def test_deleting_an_account_removes_its_files(client, db, member, files):
 
     assert files.files == {}
     assert count(db, Document) == 0 and other
+
+
+# --- script uploads and the service worker (FR-18, NFR-20) ----------------------------
+
+
+def test_script_upload_gets_json_with_the_next_url(client, db, member, files):
+    make_car(db, member)
+    sign_in(client, db, member)
+
+    response = client.post(
+        "/invoices",
+        files={"invoice": ("invoice.pdf", make_pdf(), "application/pdf")},
+        headers={"accept": "application/json"},
+        follow_redirects=False,
+    )
+
+    doc = db.scalar(select(Document))
+    assert response.status_code == 200
+    assert response.json() == {"next": f"/invoices/{doc.id}/review"}
+
+
+def test_plain_form_upload_still_redirects(client, db, member, files):
+    make_car(db, member)
+    sign_in(client, db, member)
+
+    response = upload(client)
+
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("/invoices/")
+
+
+def test_script_upload_failures_give_the_reason_as_json(client, db, member):
+    make_car(db, member)
+    sign_in(client, db, member)
+    headers = {"accept": "application/json"}
+
+    not_pdf = client.post(
+        "/invoices", files={"invoice": ("a.pdf", b"GIF89a", "application/pdf")}, headers=headers
+    )
+    too_big = client.post(
+        "/invoices",
+        files={"invoice": ("a.pdf", b"%PDF-" + b"0" * (10 * 1024 * 1024), "application/pdf")},
+        headers=headers,
+    )
+
+    assert not_pdf.status_code == 415 and "isn't a PDF" in not_pdf.json()["detail"]
+    assert too_big.status_code == 413 and "larger than 10 MB" in too_big.json()["detail"]
+
+
+def test_missing_file_on_a_form_post_shows_a_friendly_page(client, db, member):
+    sign_in(client, db, member)
+
+    page = client.post("/invoices", data={"car_id": ""}, headers={"accept": "text/html"})
+    api = client.post("/invoices", data={"car_id": ""}, headers={"accept": "application/json"})
+
+    assert page.status_code == 422
+    assert "Something was missing from the form" in page.text
+    assert not page.text.lstrip().startswith("{")
+    assert api.status_code == 422 and api.json()["detail"][0]["type"] == "missing"
+
+
+def test_service_worker_only_handles_get_navigations():
+    from app.web import STATIC_DIR
+
+    text = (STATIC_DIR / "sw.js").read_text()
+    assert 'event.request.method !== "GET"' in text
+    assert '"offline-v2"' in text

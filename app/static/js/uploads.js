@@ -57,4 +57,47 @@
         input.value = "";
       });
   });
+
+  // Invoice upload: send the PDF with fetch (a form navigation can lose the file on
+  // iPhone Safari) and follow the {"next": url} the server answers with.
+  window.uploadInvoice = true;
+  document.addEventListener("change", function (event) {
+    var input = event.target;
+    var form = input.form;
+    if (!form || !form.matches("form[data-invoice-upload]") || input.type !== "file" || !input.files.length) return;
+    var status = document.getElementById("invoice-status");
+    function say(text, isError) {
+      if (!status) return;
+      status.textContent = text;
+      status.classList.toggle("text-red-600", !!isError);
+      status.classList.toggle("dark:text-red-400", !!isError);
+    }
+    input.disabled = true;
+    say("Uploading…");
+    var body = new FormData();
+    body.append("car_id", form.elements.car_id.value);
+    body.append("invoice", input.files[0], input.files[0].name);
+    fetch(form.action, {
+      method: "POST",
+      body: body,
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(function (response) {
+        return response.json().then(
+          function (data) {
+            if (response.ok && typeof data.next === "string") return (window.location.href = data.next);
+            throw new Error(typeof data.detail === "string" ? data.detail : "");
+          },
+          function () {
+            throw new Error("");
+          }
+        );
+      })
+      .catch(function (error) {
+        say(error.message || "The invoice couldn't be uploaded. Try again.", true);
+        input.value = "";
+        input.disabled = false;
+      });
+  });
 })();

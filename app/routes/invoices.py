@@ -6,7 +6,7 @@ from pathlib import PurePath
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from sqlalchemy import func, select
 
 from app import audit, cars, documents, due, invoice, service, storage
@@ -20,7 +20,7 @@ from app.models import (
     ServiceRecord,
     User,
 )
-from app.routes.service import read_form
+from app.routes.service import UPLOAD_NOTICES, read_form
 from app.service_types import SERVICE_TYPES
 from app.sessions import DbSession, SignedInUser, same_origin
 from app.web import render
@@ -48,11 +48,23 @@ def find_cars_by_vin(db: DbSession, user: User, vin: str) -> list[Car]:
 
 @router.post("/invoices", dependencies=[Depends(same_origin)])
 async def upload(
+    request: Request,
     db: DbSession,
     user: SignedInUser,
     invoice_file: Annotated[UploadFile, File(alias="invoice")],
     car_id: Annotated[str, Form(max_length=40)] = "",
-) -> RedirectResponse:
+) -> Response:
+    # Script requests (the page's fetch) get JSON; a plain form post gets a redirect.
+    wants_json = "application/json" in request.headers.get("accept", "")
+
+    def go(url: str) -> Response:
+        return JSONResponse({"next": url}) if wants_json else RedirectResponse(url, status_code=303)
+
+    def fail(notice: str, status_code: int = 400) -> Response:
+        if wants_json:
+            return JSONResponse({"detail": UPLOAD_NOTICES[notice]}, status_code=status_code)
+        return RedirectResponse(f"/service?notice={notice}", status_code=303)
+
     selected = None
     if car_id:
         try:
@@ -63,9 +75,9 @@ async def upload(
 
     data = await invoice_file.read(invoice.MAX_PDF_BYTES + 1)
     if len(data) > invoice.MAX_PDF_BYTES:
-        return RedirectResponse("/service?notice=size", status_code=303)
+        return fail("size", 413)
     if not data.startswith(b"%PDF-"):
-        return RedirectResponse("/service?notice=type", status_code=303)
+        return fail("type", 415)
 
     parsed, problem = None, ""
     try:
@@ -80,13 +92,13 @@ async def upload(
         problem = "unreadable"
 
     if parsed is None and selected is None:
-        return RedirectResponse("/service?notice=no-car", status_code=303)
+        return fail("no-car")
 
     try:
         ref = storage.save("invoices", "pdf", data, "application/pdf")
     except storage.StorageError as exc:
         notice = "storage-setup" if exc.operation is None else "storage"
-        return RedirectResponse(f"/service?notice={notice}", status_code=303)
+        return fail(notice, 502)
 
     doc = Document(
         uploaded_by_id=user.id,
@@ -101,7 +113,7 @@ async def upload(
         db.flush()
         audit.record(db, "invoice_uploaded", user_id=user.id, document_id=str(doc.id), read=False)
         db.commit()
-        return RedirectResponse(f"/service/new?document={doc.id}&notice={problem}", status_code=303)
+        return go(f"/service/new?document={doc.id}&notice={problem}")
 
     matches = find_cars_by_vin(db, user, parsed.vin)
     doc.car_id = matches[0].id if matches else None
@@ -112,7 +124,7 @@ async def upload(
         cars.select_car(db, user, matches[0])
     audit.record(db, "invoice_uploaded", user_id=user.id, document_id=str(doc.id), read=True)
     db.commit()
-    return RedirectResponse(f"/invoices/{doc.id}/review", status_code=303)
+    return go(f"/invoices/{doc.id}/review")
 
 
 def declined_rows(parsed: invoice.ParsedInvoice) -> list[DeclinedRow]:

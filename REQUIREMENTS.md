@@ -41,7 +41,7 @@ Casad Garage is a shared garage for a household. It keeps everything about each 
 - [x] Brand and part number on service items (FR-12, FR-13)
 - [x] Accept pre-1981 VINs: form, Look up and invoice matching (FR-1, FR-2, FR-20)
 - [x] Hide the phone tab bar while typing and leave room for the keyboard (NFR-19)
-- [ ] Fix invoice upload losing the PDF on iPhone: service worker handles only GET navigations (cache `offline-v2`), upload with fetch, friendly form errors (FR-18, NFR-20)
+- [x] Fix invoice upload losing the PDF on iPhone: service worker handles only GET navigations (cache `offline-v2`), upload with fetch, friendly form errors (FR-18, NFR-20)
 
 ## Users and access
 

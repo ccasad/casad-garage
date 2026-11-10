@@ -50,7 +50,10 @@
 
 - 006 (classic VINs, keyboard): a VIN is valid if it's a modern 17-character one (no I, O, Q) or 5 to 16 letters and digits (spaces and dashes stripped). Invalid input shows the new error; a valid short VIN shows the pre-1981 hint instead and disables Look up (live in `app.js`, and server-side). The hint is shown only for valid short VINs; an invalid one keeps the error. The VIN input's `maxlength` is 21 so pasted dashes/spaces survive until normalised. The tab bar is hidden by `body.keyboard-open [data-tabbar]` (set on focusin, cleared 150 ms after focusout if no field is focused); `visualViewport` wasn't needed. Main bottom padding went from 5rem to 6rem plus the safe area.
 
+- 007 (invoice upload fix): the service worker re-sending a multipart navigation drops the file on iPhone Safari, so it now handles only GET navigations (cache `offline-v2`). Invoice upload uses `fetch` like photos; script requests are told apart by `Accept: application/json` and get `{"next": url}` or `{"detail": reason}` (413 too large, 415 not a PDF, 400 no car, 502 storage), plain posts keep the 303 redirects. A global 422 handler shows a friendly page for HTML clients and JSON otherwise (NFR-20). **The same `sw.js` change should go into `app-template`.**
+
 ## Needs a human
+- After deploying 007, close and reopen the installed app on the iPhone so the new service worker takes over, then upload a shop PDF from the Service tab.
 - Check on an iPhone (installed app and Safari): open Add a car, tap into fields and scroll; the tab bar should stay hidden while typing and return after tapping outside the fields; Save should be reachable. Also add a car with an 11-character VIN. Not testable here.
 - Connect a Vercel Blob store with private access to the project (adds BLOB_STORE_ID; OIDC is used, no token to copy) so photo and invoice uploads work in production. The Blob client in app/storage.py was written from the SDK source without a live store, so after connecting, run More > Check file storage as admin. If it fails, its status and error code say why.
 - Try the invoice import with one real invoice. The parser was only tested on an invented fixture in the documented layout; if the real PDF's text comes out differently the upload still works (the file is kept and an empty record opens), but the parser in app/invoice.py may need adjusting.
@@ -62,3 +65,4 @@
 - 004-overview-buttons: star and Edit buttons moved onto the photo row; the car name uses the full width and wraps (FR-4)
 - 005-title-diy-parts: car title number, Done by Shop / Myself with a DIY tag, and separate brand and part number on service items (FR-1, FR-12, FR-13)
 - 006-classic-vins-and-keyboard: accept pre-1981 VINs (form, Look up, invoice matching) and hide the phone tab bar while typing (FR-1, FR-2, FR-20, NFR-19)
+- 007-invoice-upload-fix: invoice upload works on iPhone (service worker ignores non-GET, upload via fetch) and form validation errors show a friendly page (FR-18, NFR-20)

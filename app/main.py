@@ -1,6 +1,10 @@
 """FastAPI entrypoint. Vercel detects the `app` object in app/main.py."""
 
+from urllib.parse import urlsplit
+
 from fastapi import FastAPI, Request
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 
@@ -8,7 +12,7 @@ from app.config import get_settings
 from app.routes import account, admin, auth, cars, due, invoices, mileage, pages, service, todo
 from app.sessions import LoginRequired
 from app.storage import OidcMiddleware
-from app.web import STATIC_DIR
+from app.web import STATIC_DIR, render
 
 app = FastAPI(title=get_settings().app_name, docs_url=None, redoc_url=None, openapi_url=None)
 app.add_middleware(OidcMiddleware)
@@ -20,6 +24,25 @@ async def login_required(request: Request, exc: LoginRequired) -> Response:
     if request.headers.get("hx-request"):
         return Response(status_code=204, headers={"HX-Redirect": "/login"})
     return RedirectResponse("/login", status_code=303)
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_form(request: Request, exc: RequestValidationError) -> Response:
+    # NFR-20: a form post that fails validation gets a friendly page, not raw JSON.
+    if "application/json" in request.headers.get(
+        "accept", ""
+    ) or "text/html" not in request.headers.get("accept", ""):
+        return await request_validation_exception_handler(request, exc)
+    back = urlsplit(request.headers.get("referer", ""))
+    link = back.path if back.netloc == request.url.netloc and back.path.startswith("/") else "/"
+    return render(
+        request,
+        "pages/form_error.html",
+        title="Something was missing",
+        user=None,
+        status_code=422,
+        back=link,
+    )
 
 
 app.include_router(pages.router)
