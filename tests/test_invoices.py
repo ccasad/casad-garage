@@ -61,7 +61,12 @@ def test_parser_reads_the_supported_layout(text):
         ("Emissions Test", "approved", 3000, "emissions_inspection"),
         ("Rear Brakes", "declined", 32000, "brakes"),  # the final amount of "Subtotal + tax"
         ("Cabin Air Filter", "declined", 4550, "cabin_air_filter"),
+        ("Cooling System Flush", "declined", 12800, "fluids"),
     ]
+    assert len(parsed.approved) == 2 and len(parsed.declined) == 3
+    assert parsed.jobs[4].note == (
+        "Coolant is dirty and due for a flush, which keeps the engine running cool."
+    )
     first, third = parsed.jobs[0], parsed.jobs[2]
     assert (first.shop_note, first.note) == ("Passed", "Sticker issued for the windshield.")
     assert (third.shop_note, third.note) == ("Pads at 3mm", "Replace pads and resurface rotors.")
@@ -71,7 +76,15 @@ def test_customer_and_payment_details_are_not_kept():
     parsed = invoice.parse_invoice(invoice.extract_text(make_pdf()))
 
     kept = json.dumps(parsed.to_json())
-    for private in ("Pat Example", "pat@example.com", "Nowhere Lane", "Visa", "0000"):
+    for private in (
+        "Pat Example",
+        "pat@example.com",
+        "Nowhere Lane",
+        "Visa",
+        "0000",
+        "ZX81QQ",
+        "Page 1 of 2",
+    ):
         assert private not in kept
 
 

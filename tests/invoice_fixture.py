@@ -22,18 +22,24 @@ PAGE_1 = [
     ("Approved on 02/10/26", "$20.00"),
     ("2 - EMISSIONS TEST", None),
     ("Authorized on 02/10/26", "$30.00"),
+    ("Grand Total: $50.00", None),
+    ("Payment History", None),
+    ("02/10/26 Visa ending 0000 $50.00", None),
+    ("Pat Example", None),
+    ("Auth code ZX81QQ", None),
+    ("Page 1 of 2 - Example Auto Care", None),
+]
+PAGE_2 = [
     ("Declined Jobs:", None),
     ("3 - REAR BRAKES **Pads at 3mm**", None),
     ("Note: Replace pads and resurface rotors.", None),
     ("Declined on 02/10/26", "Subtotal $300.00 + est. Tax $20.00   $320.00"),
     ("4 - CABIN AIR FILTER", None),
     ("Declined on 02/10/26", "$45.50"),
-    ("Grand Total: $50.00", None),
-]
-PAGE_2 = [
-    ("Payment History", None),
-    ("02/10/26 Visa ending 0000 $50.00", None),
-    ("Pat Example", None),
+    ("5 - COOLING SYSTEM FLUSH", None),
+    ("Note: Coolant is dirty and due for a flush, which keeps the engine", None),
+    ("running cool.", None),
+    ("Declined on 02/10/26", "Subtotal $120.00 + est. Tax $8.00   $128.00"),
 ]
 
 

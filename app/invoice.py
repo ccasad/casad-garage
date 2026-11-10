@@ -144,9 +144,15 @@ def parse_invoice(text: str) -> ParsedInvoice | None:
 
     job: dict | None = None  # the job being read, until its status line
     awaiting: Job | None = None  # a finished job whose total is on the next line
+    skipping = False  # inside the payment history, which is never read
     for line in lines:
         if re.match(r"Payment\s+History", line, re.IGNORECASE):
-            break  # nothing after this is stored (customer and payment details)
+            skipping = True  # payment details: skipped until the declined jobs
+            job = awaiting = None
+            continue
+        if skipping and not re.match(r"Declined\s+Jobs\s*:?", line, re.IGNORECASE):
+            continue
+        skipping = False
         if m := DATE_LINE.search(line):
             invoice.on = parse_date(*m.groups())
         if m := VEHICLE_LINE.search(line):
